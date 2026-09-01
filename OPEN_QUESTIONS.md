@@ -1,0 +1,18 @@
+# Rulebook Gaps and Product Decisions
+
+These items are intentionally not resolved by outside Mahjong conventions.
+
+1. **South Card catalogue:** the rulebook states that there are 25 South Round Cards and that each card defines a goal and score, but does not provide the full list of card goals, scores, or distribution. The South Round cannot be implemented faithfully until these are supplied.
+2. **Exact default Flower Wall size:** the rulebook directs East to double a dice roll and move that many cards to the Flower Wall. The MVP will perform that dice calculation rather than use a fixed default.
+3. **Replacement wording conflict - resolved for MVP:** dealing says Flower or Season cards are replaced from the Flower Wall, while the general turn page says “Flower or a Wind card.” The MVP interpretation is Flower/Season replacement only; Winds do not receive replacements.
+4. **Draw-pile exhaustion - resolved for MVP:** only the West Round explicitly defines a draw when the Draw Pile ends. The East MVP treats it as a draw with no winner.
+5. **Claim timing/UI protocol - partially resolved for MVP:** the reducer resolves Mahjong before any other claim and uses the rulebook's closest-next-player tie-break. The rulebook still does not define a pass window or priority between simultaneous non-Mahjong Pung claims; that remains a local UI product decision.
+6. **Kong declaration details - resolved for MVP:** the MVP permits a player to declare a concealed four-of-a-kind on their own turn, does not permit discard-based Kong claims, and applies the stated Flower Wall replacement.
+7. **West score-table wording:** two table rows use very similar “Honour Cards and/or any 1 Suit” language and may overlap. The amounts are transcribed as printed, but the table needs author confirmation before using it as a mutually exclusive scoring algorithm.
+8. **Game length:** the rulebook describes four named rounds but also mentions a shortened version with eight rounds. The requested MVP needs a product choice between one hand, four rounds, or the shortened match structure.
+9. **Coach policy:** the rulebook does not define what constitutes a “sensible” or “best” move. Ranking legal moves is an explicitly product-level teaching heuristic, not a game rule.
+10. **Flower Wall exhaustion - resolved for MVP:** the rulebook specifies replacement draws from the Flower Wall for Flowers/Seasons and Kongs, but does not state what happens when that wall is empty. The MVP ends the hand as a draw with no winner.
+11. **Flower/Season award overlap - resolved for MVP:** the rulebook lists seating-wind pairs, round-wind pairs, Pure Bouquets, and Mixed Bouquets, but does not say whether awards overlap. The MVP applies awards cumulatively.
+12. **Initial randomisation edge cases:** the rulebook uses the highest dice total to select East but gives no tie procedure, and it describes dealing but not a shuffle/randomisation procedure. A digital MVP needs a product-level treatment if it simulates those stages rather than using a fixed seat/deal scenario.
+13. **East Round Crochet scope - resolved for MVP:** Crochet is a valid East Round three-card set, and Knit requires a Crochet in the same hand.
+14. **Mixed Chow definition - bounded for MVP:** the rulebook names Mixed Chows in the East Round but does not define their tile pattern. The engine rejects them rather than importing a conventional definition; a rulebook-based definition is required to support them.
