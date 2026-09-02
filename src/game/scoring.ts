@@ -16,7 +16,7 @@ function addAward(transfers: ScoreTransfer[], recipient: Seat, base: number, rea
   }
 }
 
-function flowerAwards(player: ScorePlayer, transfers: ScoreTransfer[]) {
+export function addFlowerAwards(player: ScorePlayer, transfers: ScoreTransfer[]) {
   const ranks = player.bonusTiles.filter((tile) => tile.kind === "flower" || tile.kind === "season").map((tile) => tile.rank);
   const count = (rank: number) => ranks.filter((item) => item === rank).length;
   if (count(windNumber[player.seat]) >= 2) addAward(transfers, player.seat, 500, "Seating-wind Flower/Season pair");
@@ -31,8 +31,19 @@ function flowerAwards(player: ScorePlayer, transfers: ScoreTransfer[]) {
 export function settleEastRound(players: Record<Seat, ScorePlayer>, winner?: EastRoundWinner): EastRoundSettlement {
   const transfers: ScoreTransfer[] = [];
   if (winner) addAward(transfers, winner.seat, winner.concealed ? 1000 : 500, `${winner.concealed ? "Concealed" : "Exposed"} Mahjong`);
-  for (const seat of seats) flowerAwards(players[seat], transfers);
+  for (const seat of seats) addFlowerAwards(players[seat], transfers);
   const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
   for (const transfer of transfers) { changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
+  return { transfers, changes };
+}
+
+/** South Card score: the winner receives their printed card value from each opponent, doubled where East is involved. */
+export function settleSouthRound(players: Record<Seat, ScorePlayer>, winner: { seat: Seat; cardScore: number }, pot = 0): EastRoundSettlement {
+  const transfers: ScoreTransfer[] = [];
+  addAward(transfers, winner.seat, winner.cardScore, "South Card Mahjong");
+  for (const seat of seats) addFlowerAwards(players[seat], transfers);
+  if (pot > 0) transfers.push({ from: winner.seat, to: winner.seat, amount: pot, reason: "South Round buy pot" });
+  const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
+  for (const transfer of transfers) { if (transfer.from !== transfer.to) changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
   return { transfers, changes };
 }

@@ -53,6 +53,12 @@ const isInCompletePureChow = (tile: Tile, hand: readonly Tile[]): boolean => {
 
 export function explainHand(state: EastRoundState, seat: Seat, firstTurn: boolean): string {
   const player = state.players[seat];
+  if (state.round === "south" && state.south) {
+    const card = state.south.cards[seat];
+    const goal = card.goal;
+    const phase = state.phase === "charleston" ? "You are still in the Charleston exchange, so choose three tiles that look less useful for this specific goal." : state.phase === "discard" && state.turn === seat ? "You now need to discard one tile while protecting the parts of your hand that serve this goal." : "Keep comparing each draw to this specific South Card, rather than to the East Round four-groups-plus-a-pair shape.";
+    return `Your South Card is ${card.title}. Your personal Mahjong goal this round is: ${goal} It is worth ${card.score.toLocaleString()} points if you complete it. ${phase}`;
+  }
   const numbered = player.hand.filter((tile) => tile.kind === "number").length;
   const honours = player.hand.length - numbered;
   const groups = countGroups(player.hand);
@@ -91,6 +97,15 @@ export function analyseHand(state: EastRoundState, seat: Seat): HandAnalysis {
 export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
   const player = state.players[seat];
   const hand = state.players[seat].hand;
+  if (state.round === "south" && state.south) {
+    const card = state.south.cards[seat];
+    const analysis = analyseHand(state, seat);
+    const pairs = analysis.pairs.map((item) => `Pair: ${item} ×2 — this may help only if your South Card calls for a Pair.`);
+    const pungs = analysis.pungs.map((item) => `Pung: ${item} ×3 — three matching tiles; useful when your South Card asks for Pungs.`);
+    const developing = analysis.developingChows.map((item) => `${item.tiles} — a possible sequence; keep it only if it helps the goal on your South Card.`);
+    const weak = analysis.weakTiles.slice(0, 3).map((item) => `${item} — it does not currently match a pair, Pung, or sequence in your visible hand. Check whether it serves your South Card before keeping it.`);
+    return { overview: `Your South Card is ${card.title}: ${card.goal} This is your personal Mahjong target for this round.`, progress: `You have ${hand.length} concealed tiles. Compare every group you build against ${card.title}, not against the East Round target.`, built: [...pairs, ...pungs], developing, weak, scoring: [`Completing ${card.title} records ${card.score.toLocaleString()} points.${card.bonus ? ` ${card.bonus}` : ""}`], focus: `Your immediate focus is ${card.goal} Keep tiles that directly help this requirement; a useful-looking East Round Chow is not automatically useful in South.` };
+  }
   const groups = countGroups(hand);
   const pairs = groups.filter((group) => group.length === 2).map((group) => `Pair: ${tileLabel(group[0])} ×2 — two identical tiles; a winning hand needs one pair.`);
   const pungs = groups.filter((group) => group.length === 3).map((group) => `Pung: ${tileLabel(group[0])} ×3 — three identical tiles.`);
@@ -136,8 +151,59 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
   };
 }
 
+function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption[] {
+  const hand = state.players[seat].hand;
+  const card = state.south!.cards[seat];
+  const goal = card.goal.toLowerCase();
+  const copyCount = (tile: Tile) => hand.filter((other) => identity(other) === identity(tile)).length;
+  const suitedNeighbours = (tile: Tile) => tile.kind === "number"
+    ? hand.filter((other) => other.id !== tile.id && other.kind === "number" && other.suit === tile.suit && Math.abs(other.rank - tile.rank) <= 2).length
+    : 0;
+  const namedOnCard = (tile: Tile) => {
+    const label = tileLabel(tile).toLowerCase();
+    if (tile.kind === "number") return goal.includes(tile.suit) || goal.includes(`${tile.rank}s`) || goal.includes(` ${tile.rank} `) || goal.includes(label);
+    if (tile.kind === "wind") return goal.includes("wind") || goal.includes(tile.wind);
+    if (tile.kind === "dragon") return goal.includes("dragon") || goal.includes(tile.dragon);
+    return false;
+  };
+  const usefulValue = (tile: Tile) => {
+    let value = copyCount(tile) * 26;
+    if (namedOnCard(tile)) value += 55;
+    if (tile.kind === "number" && (goal.includes("chow") || goal.includes("run"))) value += suitedNeighbours(tile) * 15;
+    if (tile.kind === "number" && goal.includes("crochet")) value += hand.filter((other) => other.kind === "number" && other.rank === tile.rank && other.suit !== tile.suit).length * 22;
+    if (tile.kind === "number" && goal.includes("knit")) value += hand.filter((other) => other.kind === "number" && other.rank === tile.rank && other.suit !== tile.suit).length * 16;
+    if (tile.kind !== "number" && goal.includes("no honour")) value = 0;
+    if (tile.kind === "number" && goal.includes("odd-numbered") && tile.rank % 2 === 1) value += 55;
+    return value;
+  };
+  const candidates = [...hand].sort((a, b) => usefulValue(a) - usefulValue(b) || tileLabel(a).localeCompare(tileLabel(b))).slice(0, 3);
+  const strongerTiles = [...hand].filter((tile) => !candidates.some((candidate) => candidate.id === tile.id)).sort((a, b) => usefulValue(b) - usefulValue(a)).slice(0, 3);
+  const keep = strongerTiles.length
+    ? strongerTiles.map(tileLabel).join(", ")
+    : "the tiles that match your South Card most closely";
+  return candidates.map((tile, index) => {
+    const copies = copyCount(tile);
+    const neighbours = suitedNeighbours(tile);
+    const exactMatch = namedOnCard(tile);
+    const why = !exactMatch && copies === 1 && neighbours === 0
+      ? `${tileLabel(tile)} does not appear in your card’s requirement and it has no matching copy or nearby numbered tile in your hand to develop. It is one of the safest tiles to give away during this exchange.`
+      : !exactMatch
+        ? `${tileLabel(tile)} is not named by your card. It has ${copies > 1 ? "a matching copy" : neighbours ? "some nearby numbered tiles" : "only a limited route"}, but it supports your goal less directly than the tiles you are keeping.`
+        : `${tileLabel(tile)} has a small connection to your card, but it is currently the least developed of your card-related tiles. Passing it protects the stronger pieces already working together.`;
+    return {
+      tileId: tile.id,
+      title: state.phase === "charleston" ? `Pass ${tileLabel(tile)}` : `Discard ${tileLabel(tile)}`,
+      reason: why,
+      preserves: `Keep ${keep}. Those tiles currently have the clearest connection to ${card.title}.`,
+      lookingFor: `Your card asks for: ${card.goal}`,
+      alternative: index === 0 && candidates[1] ? `${tileLabel(candidates[1])} and ${tileLabel(candidates[2] ?? candidates[1])} are the other two tiles I would pass in this Charleston step.` : undefined,
+    };
+  });
+}
+
 /** A transparent teaching heuristic, not an optimal-play or hidden-information claim. */
 export function bestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption[] {
+  if (state.round === "south" && state.south) return southBestMoveOptions(state, seat);
   const hand = state.players[seat].hand;
   const copies = (tile: Tile) => hand.filter((other) => identity(other) === identity(tile)).length;
   const sameRankOtherSuits = (tile: Tile) => tile.kind !== "number" ? [] : hand.filter((other): other is Extract<Tile, { kind: "number" }> => other.kind === "number" && other.id !== tile.id && other.rank === tile.rank && other.suit !== tile.suit);

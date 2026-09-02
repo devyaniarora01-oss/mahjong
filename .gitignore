@@ -6,3 +6,4 @@ coverage/
 .DS_Store
 .env*
 !.env.example
+docs/South round cards.pdf

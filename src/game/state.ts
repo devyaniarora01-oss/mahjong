@@ -5,7 +5,9 @@ import {
   type Tile,
   needsFlowerWallReplacement,
 } from "./tiles";
-import { settleEastRound } from "./scoring";
+import { settleEastRound, settleSouthRound } from "./scoring";
+import type { SouthCard } from "./south-cards";
+import { matchesSouthCard } from "./south-goals";
 
 export type MeldKind = "pung" | "pureChow" | "crochet" | "knit" | "kong";
 export type Meld = { kind: MeldKind; tiles: Tile[]; exposed: boolean };
@@ -20,7 +22,7 @@ export type PlayerState = {
   score: number;
 };
 
-export type Phase = "draw" | "discard" | "claim";
+export type Phase = "draw" | "discard" | "claim" | "charleston";
 export type HandStatus = "active" | "draw" | "mahjong";
 
 export type GameEvent =
@@ -35,6 +37,7 @@ export type GameEvent =
   | { type: "handDrawn"; reason: "drawPileExhausted" | "flowerWallExhausted" };
 
 export type EastRoundState = {
+  round?: "east" | "south";
   status: HandStatus;
   phase: Phase;
   turn: Seat;
@@ -44,6 +47,7 @@ export type EastRoundState = {
   lastDiscard?: { tile: Tile; by: Seat };
   winner?: { seat: Seat; source: "draw" | "discard"; concealed: boolean };
   history: GameEvent[];
+  south?: { cards: Record<Seat, SouthCard>; pot: number; charlestonStep: number };
 };
 
 const nextSeat = (seat: Seat): Seat => SEATS[(SEATS.indexOf(seat) + 1) % SEATS.length];
@@ -241,17 +245,22 @@ export function isEastMahjongHand(hand: readonly Tile[], melds: readonly Meld[] 
   return canPartitionEastHand(hand, 4 - melds.length, true, melds.some((meld) => meld.kind === "crochet"));
 }
 
+const isRoundMahjongHand = (state: EastRoundState, seat: Seat, hand: readonly Tile[], melds: readonly Meld[] = state.players[seat].melds): boolean =>
+  state.round === "south" && state.south
+    ? matchesSouthCard(state.south.cards[seat], [...hand, ...melds.flatMap((meld) => meld.tiles)])
+    : isEastMahjongHand(hand, melds);
+
 const seatsAfter = (seat: Seat): Seat[] => Array.from({ length: SEATS.length - 1 }, (_, index) => SEATS[(SEATS.indexOf(seat) + index + 1) % SEATS.length]);
 
 /** Returns eligible discard winners in rulebook tie-break order. */
 export function mahjongClaimants(state: EastRoundState): Seat[] {
   if (state.status !== "active" || state.phase !== "claim" || !state.lastDiscard) return [];
-  return seatsAfter(state.lastDiscard.by).filter((seat) => isEastMahjongHand([...state.players[seat].hand, state.lastDiscard!.tile], state.players[seat].melds));
+  return seatsAfter(state.lastDiscard.by).filter((seat) => isRoundMahjongHand(state, seat, [...state.players[seat].hand, state.lastDiscard!.tile]));
 }
 
 export function canDeclareMahjong(state: EastRoundState, seat: Seat): boolean {
   if (state.status !== "active") return false;
-  if (state.phase === "discard") return state.turn === seat && isEastMahjongHand(state.players[seat].hand, state.players[seat].melds);
+  if (state.phase === "discard") return state.turn === seat && isRoundMahjongHand(state, seat, state.players[seat].hand);
   return state.phase === "claim" && mahjongClaimants(state)[0] === seat;
 }
 
@@ -262,7 +271,7 @@ export function declareMahjong(state: EastRoundState, seat: Seat): EastRoundStat
     const player = state.players[seat];
     const winner = { seat, source: "discard" as const, concealed: false };
     const unsettledPlayers = { ...state.players, [seat]: { ...player, hand: [...player.hand, discard.tile], hasCalled: true } };
-    const settlement = settleEastRound(unsettledPlayers, winner);
+    const settlement = state.round === "south" && state.south ? settleSouthRound(unsettledPlayers, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : settleEastRound(unsettledPlayers, winner);
     const players = Object.fromEntries(SEATS.map((item) => [item, { ...unsettledPlayers[item], score: unsettledPlayers[item].score + settlement.changes[item] }])) as Record<Seat, PlayerState>;
     return {
       ...state,
@@ -275,7 +284,7 @@ export function declareMahjong(state: EastRoundState, seat: Seat): EastRoundStat
   }
   const player = state.players[seat];
   const winner = { seat, source: "draw" as const, concealed: !player.hasCalled };
-  const settlement = settleEastRound(state.players, winner);
+  const settlement = state.round === "south" && state.south ? settleSouthRound(state.players, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : settleEastRound(state.players, winner);
   const players = Object.fromEntries(SEATS.map((item) => [item, { ...state.players[item], score: state.players[item].score + settlement.changes[item] }])) as Record<Seat, PlayerState>;
   return {
     ...state,
