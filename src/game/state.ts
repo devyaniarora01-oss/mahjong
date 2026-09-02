@@ -5,9 +5,10 @@ import {
   type Tile,
   needsFlowerWallReplacement,
 } from "./tiles";
-import { settleEastRound, settleSouthRound } from "./scoring";
+import { settleEastRound, settleSouthRound, settleWestRound } from "./scoring";
 import type { SouthCard } from "./south-cards";
 import { matchesSouthCard } from "./south-goals";
+import { isWestMahjongHand } from "./west-goals";
 
 export type MeldKind = "pung" | "pureChow" | "crochet" | "knit" | "kong";
 export type Meld = { kind: MeldKind; tiles: Tile[]; exposed: boolean };
@@ -33,13 +34,14 @@ export type GameEvent =
   | { type: "replacedBonus"; seat: Seat; tileId: string }
   | { type: "discarded"; seat: Seat; tileId: string }
   | { type: "claimedPung"; seat: Seat; from: Seat; tileId: string }
+  | { type: "claimedKong"; seat: Seat; from: Seat; tileId: string }
   | { type: "claimedPureChow"; seat: Seat; from: Seat; tileId: string }
   | { type: "declaredKong"; seat: Seat; tileId: string }
   | { type: "declaredMahjong"; seat: Seat; source: "draw" | "discard"; tileId?: string }
   | { type: "handDrawn"; reason: "drawPileExhausted" | "flowerWallExhausted" };
 
 export type EastRoundState = {
-  round?: "east" | "south";
+  round?: "east" | "south" | "west";
   status: HandStatus;
   phase: Phase;
   turn: Seat;
@@ -52,6 +54,7 @@ export type EastRoundState = {
   winner?: { seat: Seat; source: "draw" | "discard"; concealed: boolean };
   history: GameEvent[];
   south?: { cards: Record<Seat, SouthCard>; pot: number; charlestonStep: number };
+  west?: { charlestonStep: number };
 };
 
 const nextSeat = (seat: Seat): Seat => SEATS[(SEATS.indexOf(seat) + 1) % SEATS.length];
@@ -253,6 +256,8 @@ export function isEastMahjongHand(hand: readonly Tile[], melds: readonly Meld[] 
 const isRoundMahjongHand = (state: EastRoundState, seat: Seat, hand: readonly Tile[], melds: readonly Meld[] = state.players[seat].melds): boolean =>
   state.round === "south" && state.south
     ? matchesSouthCard(state.south.cards[seat], [...hand, ...melds.flatMap((meld) => meld.tiles)])
+    : state.round === "west"
+      ? isWestMahjongHand(hand, melds)
     : isEastMahjongHand(hand, melds);
 
 const seatsAfter = (seat: Seat): Seat[] => Array.from({ length: SEATS.length - 1 }, (_, index) => SEATS[(SEATS.indexOf(seat) + index + 1) % SEATS.length]);
@@ -276,7 +281,7 @@ export function declareMahjong(state: EastRoundState, seat: Seat): EastRoundStat
     const player = state.players[seat];
     const winner = { seat, source: "discard" as const, concealed: false };
     const unsettledPlayers = { ...state.players, [seat]: { ...player, hand: [...player.hand, discard.tile], hasCalled: true } };
-    const settlement = state.round === "south" && state.south ? settleSouthRound(unsettledPlayers, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : settleEastRound(unsettledPlayers, winner);
+    const settlement = state.round === "south" && state.south ? settleSouthRound(unsettledPlayers, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : state.round === "west" ? settleWestRound(unsettledPlayers, winner) : settleEastRound(unsettledPlayers, winner);
     const players = Object.fromEntries(SEATS.map((item) => [item, { ...unsettledPlayers[item], score: unsettledPlayers[item].score + settlement.changes[item] }])) as Record<Seat, PlayerState>;
     return {
       ...state,
@@ -289,7 +294,7 @@ export function declareMahjong(state: EastRoundState, seat: Seat): EastRoundStat
   }
   const player = state.players[seat];
   const winner = { seat, source: "draw" as const, concealed: !player.hasCalled };
-  const settlement = state.round === "south" && state.south ? settleSouthRound(state.players, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : settleEastRound(state.players, winner);
+  const settlement = state.round === "south" && state.south ? settleSouthRound(state.players, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : state.round === "west" ? settleWestRound(state.players, winner) : settleEastRound(state.players, winner);
   const players = Object.fromEntries(SEATS.map((item) => [item, { ...state.players[item], score: state.players[item].score + settlement.changes[item] }])) as Record<Seat, PlayerState>;
   return {
     ...state,
@@ -326,9 +331,31 @@ export function claimPung(state: EastRoundState, seat: Seat): EastRoundState {
   };
 }
 
+/** West explicitly permits calling a discard to complete an exposed Kong. */
+export function canClaimExposedKong(state: EastRoundState, seat: Seat): boolean {
+  return state.round === "west" && state.status === "active" && state.phase === "claim" && !!state.lastDiscard && mahjongClaimants(state).length === 0 && !!takeMatching(state.players[seat].hand, state.lastDiscard.tile, 3);
+}
+
+export function claimExposedKong(state: EastRoundState, seat: Seat): EastRoundState {
+  if (!state.lastDiscard || !canClaimExposedKong(state, seat)) throw new Error("Exposed Kong claim is not legal now.");
+  const claimed = takeMatching(state.players[seat].hand, state.lastDiscard.tile, 3)!;
+  const player = state.players[seat];
+  const hand = player.hand.filter((tile) => !claimed.some((used) => used.id === tile.id));
+  const replacement = state.flowerWall[0];
+  const kongPlayer = { ...player, hand: replacement ? [...hand, replacement] : hand, melds: [...player.melds, { kind: "kong" as const, tiles: [...claimed, state.lastDiscard.tile], exposed: true }], hasCalled: true };
+  const history: GameEvent[] = [...state.history, { type: "claimedKong", seat, from: state.lastDiscard.by, tileId: state.lastDiscard.tile.id }];
+  if (!replacement) return { ...state, status: "draw", lastDiscard: undefined, players: { ...state.players, [seat]: kongPlayer }, history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }] };
+  history.push({ type: "drew", seat, source: "flowerWall", tileId: replacement.id });
+  const flowerWall = state.flowerWall.slice(1);
+  if (moveBonusTiles(kongPlayer, flowerWall, history) === "exhausted") {
+    return { ...state, status: "draw", lastDiscard: undefined, flowerWall, players: { ...state.players, [seat]: kongPlayer }, history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }] };
+  }
+  return { ...state, phase: "discard", turn: seat, lastDiscard: undefined, flowerWall, players: { ...state.players, [seat]: kongPlayer }, history };
+}
+
 export function canClaimPureChow(state: EastRoundState, seat: Seat): boolean {
   const discardTile = state.lastDiscard?.tile;
-  if (state.status !== "active" || state.phase !== "claim" || !discardTile || mahjongClaimants(state).length > 0 || seat !== nextSeat(state.lastDiscard!.by) || discardTile.kind !== "number") return false;
+  if (state.round === "west" || state.status !== "active" || state.phase !== "claim" || !discardTile || mahjongClaimants(state).length > 0 || seat !== nextSeat(state.lastDiscard!.by) || discardTile.kind !== "number") return false;
   const candidates = state.players[seat].hand.filter((tile): tile is NumberTile => tile.kind === "number" && tile.suit === discardTile.suit);
   for (const first of candidates) for (const second of candidates) {
     if (first.id === second.id) continue;

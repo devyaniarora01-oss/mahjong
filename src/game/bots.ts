@@ -1,9 +1,11 @@
 import {
   canClaimPung,
+  canClaimExposedKong,
   canClaimPureChow,
   canDeclareMahjong,
   canDeclareConcealedKong,
   claimPung,
+  claimExposedKong,
   claimPureChow,
   declareConcealedKong,
   declareMahjong,
@@ -19,6 +21,7 @@ export type BotAction =
   | { type: "draw"; seat: Seat }
   | { type: "discard"; seat: Seat; tileId: string }
   | { type: "pung"; seat: Seat }
+  | { type: "exposedKong"; seat: Seat }
   | { type: "pureChow"; seat: Seat; tileIds: [string, string] }
   | { type: "kong"; seat: Seat; tileId: string }
   | { type: "mahjong"; seat: Seat }
@@ -53,6 +56,7 @@ export function chooseBotClaimAction(state: EastRoundState, humanSeat: Seat): Bo
   if (winner) return winner === humanSeat ? undefined : { type: "mahjong", seat: winner };
 
   for (const seat of seatsAfter(state.lastDiscard.by)) {
+    if (seat !== humanSeat && canClaimExposedKong(state, seat)) return { type: "exposedKong", seat };
     if (seat !== humanSeat && canClaimPung(state, seat)) return { type: "pung", seat };
   }
 
@@ -80,6 +84,7 @@ export function applyBotAction(state: EastRoundState, action: BotAction): EastRo
     case "draw": return drawFromPile(state, action.seat);
     case "discard": return discard(state, action.seat, action.tileId);
     case "pung": return claimPung(state, action.seat);
+    case "exposedKong": return claimExposedKong(state, action.seat);
     case "pureChow": return claimPureChow(state, action.seat, action.tileIds);
     case "kong": return declareConcealedKong(state, action.seat, action.tileId);
     case "mahjong": return declareMahjong(state, action.seat);

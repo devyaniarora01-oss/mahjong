@@ -1,4 +1,6 @@
 import type { Seat, Tile } from "./tiles";
+import type { Meld } from "./state";
+import { westHandKind } from "./west-goals";
 
 export type ScorePlayer = { seat: Seat; bonusTiles: Tile[] };
 export type EastRoundWinner = { seat: Seat; concealed: boolean };
@@ -45,5 +47,38 @@ export function settleSouthRound(players: Record<Seat, ScorePlayer>, winner: { s
   if (pot > 0) transfers.push({ from: winner.seat, to: winner.seat, amount: pot, reason: "South Round buy pot" });
   const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
   for (const transfer of transfers) { if (transfer.from !== transfer.to) changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
+  return { transfers, changes };
+}
+
+type WestScorePlayer = ScorePlayer & { hand: Tile[]; melds: Meld[] };
+
+/** West table amounts are received from each player, doubled where East is involved. */
+export function settleWestRound(players: Record<Seat, WestScorePlayer>, winner?: EastRoundWinner): EastRoundSettlement {
+  const transfers: ScoreTransfer[] = [];
+  if (winner) {
+    const kind = westHandKind(players[winner.seat].hand, players[winner.seat].melds);
+    const base: Record<NonNullable<typeof kind>, number> = {
+      sameSuit: winner.concealed ? 2_000 : 1_000,
+      honours: winner.concealed ? 2_500 : 1_500,
+      fourExposedKongs: 1_500,
+      threeConcealedKongs: 2_000,
+      concealedCleanMix: 2_000,
+      exposedCleanMix: 1_500,
+      major: 1_500,
+    };
+    const labels: Record<NonNullable<typeof kind>, string> = {
+      sameSuit: "West same-suit Pungs/Kongs/Pairs",
+      honours: "West honours-only Pungs/Kongs/Pairs",
+      fourExposedKongs: "West four exposed Kongs with a Pair",
+      threeConcealedKongs: "West three concealed Kongs path",
+      concealedCleanMix: "West concealed clean Pung/Kong/Pair path",
+      exposedCleanMix: "West exposed clean Pung/Kong/Pair path",
+      major: "West Major Hand",
+    };
+    if (kind) addAward(transfers, winner.seat, base[kind], labels[kind]);
+  }
+  for (const seat of seats) addFlowerAwards(players[seat], transfers);
+  const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
+  for (const transfer of transfers) { changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
   return { transfers, changes };
 }
