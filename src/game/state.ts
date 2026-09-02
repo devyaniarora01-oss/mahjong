@@ -14,6 +14,8 @@ export type Meld = { kind: MeldKind; tiles: Tile[]; exposed: boolean };
 
 export type PlayerState = {
   seat: Seat;
+  /** Fixed physical table position for this person; their wind seat can rotate between rounds. */
+  physicalSeat: Seat;
   hand: Tile[];
   bonusTiles: Tile[];
   melds: Meld[];
@@ -42,6 +44,8 @@ export type EastRoundState = {
   phase: Phase;
   turn: Seat;
   players: Record<Seat, PlayerState>;
+  /** The human player's current wind seat. East Round starts with the human as East. */
+  humanSeat?: Seat;
   drawPile: Tile[];
   flowerWall: Tile[];
   lastDiscard?: { tile: Tile; by: Seat };
@@ -52,7 +56,7 @@ export type EastRoundState = {
 
 const nextSeat = (seat: Seat): Seat => SEATS[(SEATS.indexOf(seat) + 1) % SEATS.length];
 
-const emptyPlayer = (seat: Seat): PlayerState => ({ seat, hand: [], bonusTiles: [], melds: [], hasCalled: false, score: 35_000 });
+const emptyPlayer = (seat: Seat): PlayerState => ({ seat, physicalSeat: seat, hand: [], bonusTiles: [], melds: [], hasCalled: false, score: 35_000 });
 
 const asPlayers = (): Record<Seat, PlayerState> => ({
   east: emptyPlayer("east"),
@@ -117,6 +121,7 @@ export function createEastRound(deck: readonly Tile[], diceTotal: number): EastR
         phase: "claim",
         turn: "east",
         players,
+        humanSeat: "east",
         drawPile: dealingQueue,
         flowerWall,
         history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }],
@@ -124,7 +129,7 @@ export function createEastRound(deck: readonly Tile[], diceTotal: number): EastR
     }
   }
 
-  return { status: "active", phase: "discard", turn: "east", players, drawPile: dealingQueue, flowerWall, history };
+  return { status: "active", phase: "discard", turn: "east", players, humanSeat: "east", drawPile: dealingQueue, flowerWall, history };
 }
 
 export function discard(state: EastRoundState, seat: Seat, tileId: string): EastRoundState {

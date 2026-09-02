@@ -6,12 +6,17 @@ export type SouthCards = Record<Seat, SouthCard>;
 export type CharlestonChoices = Record<Seat, readonly string[]>;
 
 const emptyScores = (): Record<Seat, number> => ({ east: 35_000, south: 35_000, west: 35_000, north: 35_000 });
+/** The rulebook moves the East position counterclockwise between directional rounds. */
+const previousSeatForSouth: Record<Seat, Seat> = { east: "south", south: "west", west: "north", north: "east" };
 
 /** Deals South exactly like the rulebook's normal deal, then waits for the required R-A-L Charleston. */
 export function createSouthRound(deck: readonly Tile[], diceTotal: number, scores: Record<Seat, number> = emptyScores(), cards: SouthCards = dealSouthCards(() => Math.random())): EastRoundState {
   const dealt = createEastRound(deck, diceTotal);
-  const players = Object.fromEntries(SEATS.map((seat) => [seat, { ...dealt.players[seat], score: scores[seat] }])) as Record<Seat, PlayerState>;
-  return { ...dealt, round: "south", phase: "charleston", players, south: { cards, pot: 0, charlestonStep: 0 } };
+  const players = Object.fromEntries(SEATS.map((seat) => {
+    const previousSeat = previousSeatForSouth[seat];
+    return [seat, { ...dealt.players[seat], seat, physicalSeat: previousSeat, score: scores[previousSeat] }];
+  })) as Record<Seat, PlayerState>;
+  return { ...dealt, round: "south", phase: "charleston", players, humanSeat: "north", south: { cards, pot: 0, charlestonStep: 0 } };
 }
 
 /** Each player secretly receives one South Card. A supplied random source keeps tests reproducible. */
