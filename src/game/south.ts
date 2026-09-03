@@ -32,7 +32,7 @@ export function dealSouthCards(random: () => number): SouthCards {
 
 /** Applies one exact R-A-L Charleston step: every player exchanges three chosen cards with their paired seat. */
 export function applyCharleston(state: EastRoundState, choices: CharlestonChoices): EastRoundState {
-  if (state.round !== "south" || state.phase !== "charleston" || !state.south) throw new Error("Charleston is not active.");
+  if ((state.round !== "south" && !(state.round === "north" && state.north?.format === "south")) || state.phase !== "charleston" || !state.south) throw new Error("Charleston is not active.");
   const pairs = SOUTH_CHARLESTON_PAIRS[state.south.charlestonStep];
   if (!pairs) throw new Error("Charleston has already finished.");
   for (const seat of SEATS) {

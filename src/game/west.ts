@@ -43,7 +43,7 @@ const exchanges: readonly (readonly (readonly [Seat, Seat])[])[] = [
 
 /** West uses the same mandatory Right, Across, Left Charleston as described in the rulebook. */
 export function applyWestCharleston(state: EastRoundState, choices: CharlestonChoices): EastRoundState {
-  if (state.round !== "west" || state.phase !== "charleston" || !state.west) throw new Error("West Charleston is not active.");
+  if ((state.round !== "west" && !(state.round === "north" && state.north?.format === "west")) || state.phase !== "charleston" || !state.west) throw new Error("West Charleston is not active.");
   const pairs = exchanges[state.west.charlestonStep];
   if (!pairs) throw new Error("West Charleston has already finished.");
   for (const seat of SEATS) {

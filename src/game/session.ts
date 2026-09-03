@@ -1,6 +1,7 @@
 import { createEastRound, type EastRoundState } from "./state";
 import { createSouthRound, dealSouthCards, type SouthCards } from "./south";
 import { createWestRound } from "./west";
+import { createNorthRound, type NorthFormat } from "./north";
 import { createTileSet, shuffle, type Seat } from "./tiles";
 
 /** Creates a fresh browser hand; tests may supply a deterministic random source. */
@@ -23,4 +24,17 @@ export function startBrowserWestRound(
   physicalSeats?: Record<Seat, Seat>,
 ): EastRoundState {
   return createWestRound(shuffle(createTileSet(), random), 8, scores, previousHumanSeat, physicalSeats);
+}
+
+/** Starts North after West. The setup choice is retained as part of serialized game state. */
+export function startBrowserNorthRound(
+  scores: Record<Seat, number>,
+  previousHumanSeat: Seat,
+  physicalSeats: Record<Seat, Seat>,
+  format: NorthFormat,
+  jokerRank?: number,
+  cards?: SouthCards,
+  random: () => number = Math.random,
+): EastRoundState {
+  return createNorthRound(shuffle(createTileSet(), random), 8, scores, previousHumanSeat, physicalSeats, format, jokerRank, cards ?? dealSouthCards(random));
 }

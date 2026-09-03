@@ -90,18 +90,21 @@ const isInCompletePureChow = (tile: Tile, hand: readonly Tile[]): boolean => {
 
 export function explainHand(state: EastRoundState, seat: Seat, firstTurn: boolean): string {
   const player = state.players[seat];
-  if (state.round === "south" && state.south) {
+  const northEastFormat = state.round === "north" && state.north?.format === "east";
+  const southFormat = state.round === "south" || (state.round === "north" && state.north?.format === "south");
+  const westFormat = state.round === "west" || (state.round === "north" && state.north?.format === "west");
+  if (southFormat && state.south) {
     const card = state.south.cards[seat];
     const goal = card.goal;
     const phase = state.phase === "charleston" ? "You are still in the Charleston exchange, so choose three tiles that look less useful for this specific goal." : state.phase === "discard" && state.turn === seat ? "You now need to discard one tile while protecting the parts of your hand that serve this goal." : "Keep comparing each draw to this specific South Card, rather than to the East Round four-groups-plus-a-pair shape.";
-    return `Your South Card is ${card.title}. Your personal Mahjong goal this round is: ${goal} It is worth ${card.score.toLocaleString()} points if you complete it. ${phase}`;
+    return `Your South Card is ${card.title}. Your personal Mahjong goal this round is: ${goal} It is worth ${card.score.toLocaleString()} points if you complete it. ${state.round === "north" ? "Flowers and Seasons are concealed jokers in South-as-North. They can help complete a group but cannot make a Pair; buying is not allowed." : ""} ${phase}`;
   }
-  if (state.round === "west") {
+  if (westFormat) {
     const groups = countGroups(player.hand);
     const pairs = groups.filter((group) => group.length === 2).map((group) => tileLabel(group[0]));
     const pungs = groups.filter((group) => group.length === 3).map((group) => tileLabel(group[0]));
     const kongs = groups.filter((group) => group.length >= 4).map((group) => tileLabel(group[0]));
-    return `West Round uses only Pungs, Kongs, and one Pair—Pure Chows do not count here. You currently have ${pairs.length ? `pair${pairs.length === 1 ? "" : "s"} of ${pairs.join(", ")}` : "no visible Pair"}${pungs.length ? `, Pung${pungs.length === 1 ? "" : "s"} of ${pungs.join(", ")}` : ""}${kongs.length ? `, and Kong${kongs.length === 1 ? "" : "s"} of ${kongs.join(", ")}` : ""}. A legal West hand must include at least one Kong and must follow one of the West Round clean-hand paths.`;
+    return `West Round uses only Pungs, Kongs, and one Pair—Pure Chows do not count here. You currently have ${pairs.length ? `pair${pairs.length === 1 ? "" : "s"} of ${pairs.join(", ")}` : "no visible Pair"}${pungs.length ? `, Pung${pungs.length === 1 ? "" : "s"} of ${pungs.join(", ")}` : ""}${kongs.length ? `, and Kong${kongs.length === 1 ? "" : "s"} of ${kongs.join(", ")}` : ""}. A legal West hand must include at least one Kong and must follow one of the West Round clean-hand paths.${state.round === "north" ? ` Every ${state.north?.jokerRank} Bamboo, Character, and Dot is a joker in this North format; buying is not allowed.` : ""}`;
   }
   const numbered = player.hand.filter((tile) => tile.kind === "number").length;
   const honours = player.hand.length - numbered;
@@ -111,7 +114,9 @@ export function explainHand(state: EastRoundState, seat: Seat, firstTurn: boolea
   const runs = connectedPairs(player.hand);
   const crochetStarts = Object.values(player.hand.filter((tile): tile is Extract<Tile, { kind: "number" }> => tile.kind === "number").reduce<Record<number, Set<string>>>((acc, tile) => ({ ...acc, [tile.rank]: new Set([...(acc[tile.rank] ?? []), tile.suit]) }), {})).filter((suits) => suits.size === 2).length;
   const shape = `${pairs.length ? ` You have ${pairs.length} pair${pairs.length === 1 ? "" : "s"}: ${pairs.join(", ")}. A Pure Pair is two identical tiles.` : " You do not currently have a visible pair."}${triples.length ? ` You already hold ${triples.length} three-of-a-kind group${triples.length === 1 ? "" : "s"}: ${triples.join(", ")}. Three identical tiles make a Pung.` : ""}${runs.length ? ` Your connected tiles include ${runs.slice(0, 2).join(" and ")}; a Pure Chow needs three consecutive tiles of one suit.` : ""}${crochetStarts ? ` You also have ${crochetStarts} two-suit same-number start that could grow into a Crochet; a Crochet uses the same number in all three suits.` : ""}`;
-  if (firstTurn) return `You have ${player.hand.length} tiles because East begins the round with 14. Your visible hand has ${numbered} numbered tiles and ${honours} honour tiles.${shape} Your East Round goal is four three-tile sets plus one two-tile set.`;
+  if (firstTurn) return northEastFormat
+    ? `East begins North Round with 14 tiles, so you start with ${player.hand.length}. Your visible hand has ${numbered} numbered tiles and ${honours} honour tiles.${shape} East-as-North uses the East hand shape: four three-tile sets plus one two-tile set. Flowers and Seasons do not add North Round score awards.`
+    : `You have ${player.hand.length} tiles because East begins the round with 14. Your visible hand has ${numbered} numbered tiles and ${honours} honour tiles.${shape} Your East Round goal is four three-tile sets plus one two-tile set.`;
   if (state.phase === "draw" && state.turn === seat) return `It is your turn to draw. After drawing from the Draw Pile, you will choose one tile to discard.`;
   if (state.phase === "discard" && state.turn === seat) {
     const isolated = [...player.hand].sort((left, right) => chowConnections(left, player.hand) - chowConnections(right, player.hand))[0];
@@ -141,16 +146,18 @@ export function analyseHand(state: EastRoundState, seat: Seat): HandAnalysis {
 export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
   const player = state.players[seat];
   const hand = state.players[seat].hand;
-  if (state.round === "south" && state.south) {
+  const southFormat = state.round === "south" || (state.round === "north" && state.north?.format === "south");
+  const westFormat = state.round === "west" || (state.round === "north" && state.north?.format === "west");
+  if (southFormat && state.south) {
     const card = state.south.cards[seat];
     const analysis = analyseHand(state, seat);
     const pairs = analysis.pairs.map((item) => `Pair: ${item} ×2 — this may help only if your South Card calls for a Pair.`);
     const pungs = analysis.pungs.map((item) => `Pung: ${item} ×3 — three matching tiles; useful when your South Card asks for Pungs.`);
     const developing = analysis.developingChows.map((item) => `${item.tiles} — a possible sequence; keep it only if it helps the goal on your South Card.`);
     const weak = analysis.weakTiles.slice(0, 3).map((item) => `${item} — it does not currently match a pair, Pung, or sequence in your visible hand. Check whether it serves your South Card before keeping it.`);
-    return { overview: `Your South Card is ${card.title}: ${card.goal} This is your personal Mahjong target for this round.`, progress: `You have ${hand.length} concealed tiles. Compare every group you build against ${card.title}, not against the East Round target.`, built: [...pairs, ...pungs], developing, weak, scoring: [`Completing ${card.title} records ${card.score.toLocaleString()} points.${card.bonus ? ` ${card.bonus}` : ""}`], focus: `Your immediate focus is ${card.goal} Keep tiles that directly help this requirement; a useful-looking East Round Chow is not automatically useful in South.` };
+    return { overview: `Your South Card is ${card.title}: ${card.goal} This is your personal Mahjong target for this round.`, progress: `You have ${hand.length} concealed tiles. Compare every group you build against ${card.title}, not against the East Round target.${state.round === "north" ? " Flowers and Seasons are concealed jokers here, but cannot form a Pair." : ""}`, built: [...pairs, ...pungs], developing, weak, scoring: [`Completing ${card.title} records ${card.score.toLocaleString()} points.${card.bonus ? ` ${card.bonus}` : ""}${state.round === "north" ? " North does not add Flower/Season awards." : ""}`], focus: `Your immediate focus is ${card.goal} Keep tiles that directly help this requirement; a useful-looking East Round Chow is not automatically useful in South.` };
   }
-  if (state.round === "west") {
+  if (westFormat) {
     const groups = countGroups(hand);
     const pairs = groups.filter((group) => group.length === 2).map((group) => `Pair: ${tileLabel(group[0])} ×2 — two matching tiles; a West hand needs one Pair.`);
     const pungs = groups.filter((group) => group.length === 3).map((group) => `Pung: ${tileLabel(group[0])} ×3 — three matching tiles; this is a valid West group.`);
@@ -159,7 +166,7 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
     const numberedSuits = new Set(hand.filter((tile): tile is Extract<Tile, { kind: "number" }> => tile.kind === "number").map((tile) => tile.suit));
     const cleanNote = numberedSuits.size <= 1 ? "Your numbered tiles are currently in one suit, which keeps a Clean Hand path open." : "Your numbered tiles currently use more than one suit. The West rulebook's Clean Hand paths require only one numbered suit, with honours allowed where stated.";
     return {
-      overview: `West Round requires four Pungs/Kongs plus one Pair, with at least one Kong. Pure Chows and Crochet/Knit patterns are not West groups.`,
+      overview: `West Round requires four Pungs/Kongs plus one Pair, with at least one Kong. Pure Chows and Crochet/Knit patterns are not West groups.${state.round === "north" ? ` Every ${state.north?.jokerRank} Bamboo, Character, and Dot is a joker in this hand.` : ""}`,
       progress: `You have ${hand.length} concealed tiles and ${player.melds.length} declared group${player.melds.length === 1 ? "" : "s"}. ${cleanNote}`,
       built: [...pairs, ...pungs, ...kongs],
       developing: groups.filter((group) => group.length === 2).map((group) => `${tileLabel(group[0])} ×2 — one more matching tile makes a Pung; two matching tiles make a Kong.`),
@@ -190,10 +197,10 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
   const weak = analysis.weakTiles.slice(0, 3).map((label) => `${label} — it is not currently in a pair, Pung, or consecutive numbered sequence.`);
   const built = [...pairs, ...pungs, ...kongs, ...chows];
   const bonusRanks = player.bonusTiles.filter((tile) => tile.kind === "flower" || tile.kind === "season").map((tile) => tile.rank);
-  const scoring = player.bonusTiles.length ? [`Flower/Season bonus tiles: ${player.bonusTiles.length}. They stay outside your hand and are recorded separately when the round is scored.`] : [];
+  const scoring = player.bonusTiles.length ? [state.round === "north" ? `Flower/Season bonus tiles: ${player.bonusTiles.length}. They stay outside your hand and are replaced normally, but do not add North Round score awards.` : `Flower/Season bonus tiles: ${player.bonusTiles.length}. They stay outside your hand and are recorded separately when the round is scored.`] : [];
   const seatRank: Record<Seat, number> = { east: 1, south: 2, west: 3, north: 4 };
-  if (bonusRanks.filter((rank) => rank === seatRank[seat]).length >= 2) scoring.push("You have the two Flowers/Seasons matching your seat wind. That is a seating-wind bonus award when the round is scored.");
-  if (bonusRanks.filter((rank) => rank === 1).length >= 2) scoring.push("You have the East-numbered Flower/Season pair. That is an East round-wind bonus award when the round is scored.");
+  if (state.round !== "north" && bonusRanks.filter((rank) => rank === seatRank[seat]).length >= 2) scoring.push("You have the two Flowers/Seasons matching your seat wind. That is a seating-wind bonus award when the round is scored.");
+  if (state.round !== "north" && bonusRanks.filter((rank) => rank === 1).length >= 2) scoring.push("You have the East-numbered Flower/Season pair. That is an East round-wind bonus award when the round is scored.");
   const target = `Your target is four three-tile groups plus one two-tile pair. You currently have ${hand.length} concealed tiles${state.players[seat].melds.length ? ` and ${state.players[seat].melds.length} exposed group${state.players[seat].melds.length === 1 ? "" : "s"}` : ""}.`;
   const focus = developing[0]
     ? `Focus on ${developing[0].split(" — ")[0]}. It already has a direct route to a Pure Chow, so avoid breaking it without a reason.`
@@ -230,6 +237,7 @@ function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption
   };
   const usefulValue = (tile: Tile) => {
     let value = copyCount(tile) * 26;
+    if (state.round === "north" && state.north?.format === "south" && (tile.kind === "flower" || tile.kind === "season")) value += 120;
     if (namedOnCard(tile)) value += 55;
     if (tile.kind === "number" && (goal.includes("chow") || goal.includes("run"))) value += suitedNeighbours(tile) * 15;
     if (tile.kind === "number" && goal.includes("crochet")) value += hand.filter((other) => other.kind === "number" && other.rank === tile.rank && other.suit !== tile.suit).length * 22;
@@ -247,7 +255,9 @@ function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption
     const copies = copyCount(tile);
     const neighbours = suitedNeighbours(tile);
     const exactMatch = namedOnCard(tile);
-    const why = !exactMatch && copies === 1 && neighbours === 0
+    const why = state.round === "north" && state.north?.format === "south" && (tile.kind === "flower" || tile.kind === "season")
+      ? `${tileLabel(tile)} is a concealed joker in South-as-North, so it can stand in for a needed card. Keep it unless your South Card already has a stronger completed route.`
+      : !exactMatch && copies === 1 && neighbours === 0
       ? `${tileLabel(tile)} does not appear in your card’s requirement and it has no matching copy or nearby numbered tile in your hand to develop. It is one of the safest tiles to give away during this exchange.`
       : !exactMatch
         ? `${tileLabel(tile)} is not named by your card. It has ${copies > 1 ? "a matching copy" : neighbours ? "some nearby numbered tiles" : "only a limited route"}, but it supports your goal less directly than the tiles you are keeping.`
@@ -273,6 +283,7 @@ function westBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption[
   const value = (tile: Tile) => {
     const matching = copies(tile);
     let result = matching * 50;
+    if (state.round === "north" && state.north?.format === "west" && tile.kind === "number" && tile.rank === state.north.jokerRank) result += 120;
     if (tile.kind === "number" && preferredSuit && tile.suit === preferredSuit) result += 18;
     if (tile.kind === "number" && numberedSuits.size > 1 && tile.suit !== preferredSuit) result -= 22;
     return result;
@@ -285,7 +296,9 @@ function westBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption[
     const matching = copies(tile);
     const next = candidates[index + 1];
     const mixedSuit = tile.kind === "number" && !!preferredSuit && tile.suit !== preferredSuit;
-    const reason = matching === 1
+    const reason = state.round === "north" && state.north?.format === "west" && tile.kind === "number" && tile.rank === state.north.jokerRank
+      ? `${tileLabel(tile)} is a selected North joker. It can stand in for a card needed by a permitted West group, so this Coach keeps it below ordinary weak discard candidates.`
+      : matching === 1
       ? mixedSuit
         ? `${tileLabel(tile)} is the only ${tile.suit} tile in this part of your hand. West hands use Pungs, Kongs, and a Pair, and keeping a second numbered suit works against the rulebook's Clean Hand paths.`
         : `${tileLabel(tile)} has no matching copy yet. In West it cannot form a Chow, so its next useful step would be another matching tile for a Pair.`
@@ -305,8 +318,8 @@ function westBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption[
 
 /** A transparent teaching heuristic, not an optimal-play or hidden-information claim. */
 export function bestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption[] {
-  if (state.round === "south" && state.south) return southBestMoveOptions(state, seat);
-  if (state.round === "west") return westBestMoveOptions(state, seat);
+  if ((state.round === "south" || (state.round === "north" && state.north?.format === "south")) && state.south) return southBestMoveOptions(state, seat);
+  if (state.round === "west" || (state.round === "north" && state.north?.format === "west")) return westBestMoveOptions(state, seat);
   const hand = state.players[seat].hand;
   const copies = (tile: Tile) => hand.filter((other) => identity(other) === identity(tile)).length;
   const sameRankOtherSuits = (tile: Tile) => tile.kind !== "number" ? [] : hand.filter((other): other is Extract<Tile, { kind: "number" }> => other.kind === "number" && other.id !== tile.id && other.rank === tile.rank && other.suit !== tile.suit);

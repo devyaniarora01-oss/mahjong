@@ -5,10 +5,11 @@ import {
   type Tile,
   needsFlowerWallReplacement,
 } from "./tiles";
-import { settleEastRound, settleSouthRound, settleWestRound } from "./scoring";
+import { settleEastRound, settleNorthEastRound, settleNorthSouthRound, settleNorthWestRound, settleSouthRound, settleWestRound } from "./scoring";
 import type { SouthCard } from "./south-cards";
 import { matchesSouthCard } from "./south-goals";
 import { isWestMahjongHand } from "./west-goals";
+import { isSouthNorthJoker, isWestNorthJoker, isWestNorthMahjongHand, matchesSouthNorthCard } from "./north-goals";
 
 export type MeldKind = "pung" | "pureChow" | "crochet" | "knit" | "kong";
 export type Meld = { kind: MeldKind; tiles: Tile[]; exposed: boolean };
@@ -37,11 +38,12 @@ export type GameEvent =
   | { type: "claimedKong"; seat: Seat; from: Seat; tileId: string }
   | { type: "claimedPureChow"; seat: Seat; from: Seat; tileId: string }
   | { type: "declaredKong"; seat: Seat; tileId: string }
+  | { type: "replacedJoker"; seat: Seat; tileId: string }
   | { type: "declaredMahjong"; seat: Seat; source: "draw" | "discard"; tileId?: string }
   | { type: "handDrawn"; reason: "drawPileExhausted" | "flowerWallExhausted" };
 
 export type EastRoundState = {
-  round?: "east" | "south" | "west";
+  round?: "east" | "south" | "west" | "north";
   status: HandStatus;
   phase: Phase;
   turn: Seat;
@@ -55,6 +57,8 @@ export type EastRoundState = {
   history: GameEvent[];
   south?: { cards: Record<Seat, SouthCard>; pot: number; charlestonStep: number };
   west?: { charlestonStep: number };
+  /** North's East player selects one of the three rulebook formats. */
+  north?: { format: "east" | "south" | "west"; jokerRank?: number };
 };
 
 const nextSeat = (seat: Seat): Seat => SEATS[(SEATS.indexOf(seat) + 1) % SEATS.length];
@@ -83,7 +87,7 @@ function moveBonusTiles(player: PlayerState, flowerWall: Tile[], history: GameEv
 }
 
 /** Deals exactly by the rulebook's 36-card allocations and East-led dealing procedure. */
-export function createEastRound(deck: readonly Tile[], diceTotal: number): EastRoundState {
+export function createEastRound(deck: readonly Tile[], diceTotal: number, options: { retainBonusTiles?: boolean } = {}): EastRoundState {
   if (deck.length !== 144) throw new Error("East Round requires the 144-card rulebook set.");
   const flowerWallSize = diceTotal * 2;
   if (!Number.isInteger(diceTotal) || flowerWallSize < 0 || flowerWallSize > 36) {
@@ -96,9 +100,12 @@ export function createEastRound(deck: readonly Tile[], diceTotal: number): EastR
     west: deck.slice(72, 108),
     north: deck.slice(108, 144),
   };
-  const flowerWall = [...allocations.east.slice(0, flowerWallSize)];
+  const flowerWall = options.retainBonusTiles
+    ? allocations.east.filter((tile) => !needsFlowerWallReplacement(tile)).slice(0, flowerWallSize)
+    : [...allocations.east.slice(0, flowerWallSize)];
+  const flowerWallIds = new Set(flowerWall.map((tile) => tile.id));
   const dealingQueue = [
-    ...allocations.east.slice(flowerWallSize),
+    ...(options.retainBonusTiles ? allocations.east.filter((tile) => !flowerWallIds.has(tile.id)) : allocations.east.slice(flowerWallSize)),
     ...allocations.south,
     ...allocations.west,
     ...allocations.north,
@@ -118,7 +125,7 @@ export function createEastRound(deck: readonly Tile[], diceTotal: number): EastR
   players.east.hand.push(eastExtra);
 
   for (const seat of SEATS) {
-    if (moveBonusTiles(players[seat], flowerWall, history) === "exhausted") {
+    if (!options.retainBonusTiles && moveBonusTiles(players[seat], flowerWall, history) === "exhausted") {
       return {
         status: "draw",
         phase: "claim",
@@ -162,7 +169,8 @@ export function drawFromPile(state: EastRoundState, seat: Seat): EastRoundState 
   const player = { ...state.players[seat], hand: [...state.players[seat].hand, tile] };
   const flowerWall = [...state.flowerWall];
   const history: GameEvent[] = [...state.history, { type: "drew", seat, source: "drawPile", tileId: tile.id }];
-  if (moveBonusTiles(player, flowerWall, history) === "exhausted") {
+  const southNorthJokers = state.round === "north" && state.north?.format === "south";
+  if (!southNorthJokers && moveBonusTiles(player, flowerWall, history) === "exhausted") {
     return {
       ...state,
       status: "draw",
@@ -258,7 +266,13 @@ const isRoundMahjongHand = (state: EastRoundState, seat: Seat, hand: readonly Ti
     ? matchesSouthCard(state.south.cards[seat], [...hand, ...melds.flatMap((meld) => meld.tiles)])
     : state.round === "west"
       ? isWestMahjongHand(hand, melds)
-    : isEastMahjongHand(hand, melds);
+      : state.round === "north" && state.north?.format === "south" && state.south
+        ? matchesSouthNorthCard(state.south.cards[seat], hand, melds)
+        : state.round === "north" && state.north?.format === "west"
+          ? isWestNorthMahjongHand(hand, melds, state.north.jokerRank)
+      : state.round === "north" && state.north?.format === "east"
+        ? isEastMahjongHand(hand, melds)
+      : isEastMahjongHand(hand, melds);
 
 const seatsAfter = (seat: Seat): Seat[] => Array.from({ length: SEATS.length - 1 }, (_, index) => SEATS[(SEATS.indexOf(seat) + index + 1) % SEATS.length]);
 
@@ -281,7 +295,7 @@ export function declareMahjong(state: EastRoundState, seat: Seat): EastRoundStat
     const player = state.players[seat];
     const winner = { seat, source: "discard" as const, concealed: false };
     const unsettledPlayers = { ...state.players, [seat]: { ...player, hand: [...player.hand, discard.tile], hasCalled: true } };
-    const settlement = state.round === "south" && state.south ? settleSouthRound(unsettledPlayers, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : state.round === "west" ? settleWestRound(unsettledPlayers, winner) : settleEastRound(unsettledPlayers, winner);
+    const settlement = state.round === "south" && state.south ? settleSouthRound(unsettledPlayers, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : state.round === "west" ? settleWestRound(unsettledPlayers, winner) : state.round === "north" && state.north?.format === "south" && state.south ? settleNorthSouthRound(unsettledPlayers, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : state.round === "north" && state.north?.format === "west" ? settleNorthWestRound(unsettledPlayers, winner, state.north.jokerRank) : state.round === "north" ? settleNorthEastRound(unsettledPlayers, winner) : settleEastRound(unsettledPlayers, winner);
     const players = Object.fromEntries(SEATS.map((item) => [item, { ...unsettledPlayers[item], score: unsettledPlayers[item].score + settlement.changes[item] }])) as Record<Seat, PlayerState>;
     return {
       ...state,
@@ -294,7 +308,7 @@ export function declareMahjong(state: EastRoundState, seat: Seat): EastRoundStat
   }
   const player = state.players[seat];
   const winner = { seat, source: "draw" as const, concealed: !player.hasCalled };
-  const settlement = state.round === "south" && state.south ? settleSouthRound(state.players, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : state.round === "west" ? settleWestRound(state.players, winner) : settleEastRound(state.players, winner);
+  const settlement = state.round === "south" && state.south ? settleSouthRound(state.players, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : state.round === "west" ? settleWestRound(state.players, winner) : state.round === "north" && state.north?.format === "south" && state.south ? settleNorthSouthRound(state.players, { seat, cardScore: state.south.cards[seat].score }, state.south.pot) : state.round === "north" && state.north?.format === "west" ? settleNorthWestRound(state.players, winner, state.north.jokerRank) : state.round === "north" ? settleNorthEastRound(state.players, winner) : settleEastRound(state.players, winner);
   const players = Object.fromEntries(SEATS.map((item) => [item, { ...state.players[item], score: state.players[item].score + settlement.changes[item] }])) as Record<Seat, PlayerState>;
   return {
     ...state,
@@ -310,13 +324,25 @@ const takeMatching = (hand: Tile[], target: Tile, count: number): Tile[] | undef
   return matching.length === count ? matching : undefined;
 };
 
+const canActAsMatch = (state: EastRoundState, tile: Tile, target: Tile): boolean =>
+  sameTile(tile, target) ||
+  (state.round === "north" && state.north?.format === "south" && isSouthNorthJoker(tile)) ||
+  (state.round === "north" && state.north?.format === "west" && isWestNorthJoker(tile, state.north.jokerRank));
+
+const takeMatchingOrNorthJokers = (state: EastRoundState, hand: Tile[], target: Tile, count: number): Tile[] | undefined => {
+  const exact = hand.filter((tile) => sameTile(tile, target));
+  const jokers = hand.filter((tile) => !sameTile(tile, target) && canActAsMatch(state, tile, target));
+  const result = [...exact, ...jokers].slice(0, count);
+  return result.length === count ? result : undefined;
+};
+
 export function canClaimPung(state: EastRoundState, seat: Seat): boolean {
-  return state.status === "active" && state.phase === "claim" && !!state.lastDiscard && mahjongClaimants(state).length === 0 && !!takeMatching(state.players[seat].hand, state.lastDiscard.tile, 2);
+  return state.status === "active" && state.phase === "claim" && !!state.lastDiscard && mahjongClaimants(state).length === 0 && !!takeMatchingOrNorthJokers(state, state.players[seat].hand, state.lastDiscard.tile, 2);
 }
 
 export function claimPung(state: EastRoundState, seat: Seat): EastRoundState {
   if (!state.lastDiscard || !canClaimPung(state, seat)) throw new Error("Pung claim is not legal now.");
-  const claimed = takeMatching(state.players[seat].hand, state.lastDiscard.tile, 2)!;
+  const claimed = takeMatchingOrNorthJokers(state, state.players[seat].hand, state.lastDiscard.tile, 2)!;
   const player = state.players[seat];
   return {
     ...state,
@@ -333,12 +359,12 @@ export function claimPung(state: EastRoundState, seat: Seat): EastRoundState {
 
 /** West explicitly permits calling a discard to complete an exposed Kong. */
 export function canClaimExposedKong(state: EastRoundState, seat: Seat): boolean {
-  return state.round === "west" && state.status === "active" && state.phase === "claim" && !!state.lastDiscard && mahjongClaimants(state).length === 0 && !!takeMatching(state.players[seat].hand, state.lastDiscard.tile, 3);
+  return (state.round === "west" || (state.round === "north" && state.north?.format === "west")) && state.status === "active" && state.phase === "claim" && !!state.lastDiscard && mahjongClaimants(state).length === 0 && !!takeMatchingOrNorthJokers(state, state.players[seat].hand, state.lastDiscard.tile, 3);
 }
 
 export function claimExposedKong(state: EastRoundState, seat: Seat): EastRoundState {
   if (!state.lastDiscard || !canClaimExposedKong(state, seat)) throw new Error("Exposed Kong claim is not legal now.");
-  const claimed = takeMatching(state.players[seat].hand, state.lastDiscard.tile, 3)!;
+  const claimed = takeMatchingOrNorthJokers(state, state.players[seat].hand, state.lastDiscard.tile, 3)!;
   const player = state.players[seat];
   const hand = player.hand.filter((tile) => !claimed.some((used) => used.id === tile.id));
   const replacement = state.flowerWall[0];
@@ -347,7 +373,7 @@ export function claimExposedKong(state: EastRoundState, seat: Seat): EastRoundSt
   if (!replacement) return { ...state, status: "draw", lastDiscard: undefined, players: { ...state.players, [seat]: kongPlayer }, history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }] };
   history.push({ type: "drew", seat, source: "flowerWall", tileId: replacement.id });
   const flowerWall = state.flowerWall.slice(1);
-  if (moveBonusTiles(kongPlayer, flowerWall, history) === "exhausted") {
+  if (!(state.round === "north" && state.north?.format === "south") && moveBonusTiles(kongPlayer, flowerWall, history) === "exhausted") {
     return { ...state, status: "draw", lastDiscard: undefined, flowerWall, players: { ...state.players, [seat]: kongPlayer }, history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }] };
   }
   return { ...state, phase: "discard", turn: seat, lastDiscard: undefined, flowerWall, players: { ...state.players, [seat]: kongPlayer }, history };
@@ -355,12 +381,14 @@ export function claimExposedKong(state: EastRoundState, seat: Seat): EastRoundSt
 
 export function canClaimPureChow(state: EastRoundState, seat: Seat): boolean {
   const discardTile = state.lastDiscard?.tile;
-  if (state.round === "west" || state.status !== "active" || state.phase !== "claim" || !discardTile || mahjongClaimants(state).length > 0 || seat !== nextSeat(state.lastDiscard!.by) || discardTile.kind !== "number") return false;
-  const candidates = state.players[seat].hand.filter((tile): tile is NumberTile => tile.kind === "number" && tile.suit === discardTile.suit);
+  if (state.round === "west" || (state.round === "north" && state.north?.format === "west") || state.status !== "active" || state.phase !== "claim" || !discardTile || mahjongClaimants(state).length > 0 || seat !== nextSeat(state.lastDiscard!.by) || discardTile.kind !== "number") return false;
+  const southNorth = state.round === "north" && state.north?.format === "south";
+  const candidates = state.players[seat].hand.filter((tile) => (tile.kind === "number" && tile.suit === discardTile.suit) || (southNorth && isSouthNorthJoker(tile)));
   for (const first of candidates) for (const second of candidates) {
     if (first.id === second.id) continue;
-    const ranks = [discardTile.rank, first.rank, second.rank].sort((a, b) => a - b);
-    if (ranks[1] === ranks[0] + 1 && ranks[2] === ranks[1] + 1) return true;
+    const numbered = [discardTile, first, second].filter((tile): tile is NumberTile => tile.kind === "number");
+    if (numbered.length !== new Set(numbered.map((tile) => tile.rank)).size || numbered.some((tile) => tile.suit !== discardTile.suit)) continue;
+    if ([discardTile.rank - 2, discardTile.rank - 1, discardTile.rank].some((start) => start >= 1 && start <= 7 && numbered.every((tile) => tile.rank >= start && tile.rank <= start + 2))) return true;
   }
   return false;
 }
@@ -370,9 +398,11 @@ export function claimPureChow(state: EastRoundState, seat: Seat, tileIds: readon
   const chosen = tileIds.map((id) => state.players[seat].hand.find((tile) => tile.id === id));
   if (chosen.some((tile) => !tile) || chosen[0]!.id === chosen[1]!.id) throw new Error("Choose two distinct hand tiles.");
   const discardTile = state.lastDiscard.tile;
-  if (discardTile.kind !== "number" || chosen.some((tile) => tile!.kind !== "number" || (tile as NumberTile).suit !== discardTile.suit)) throw new Error("Pure Chow requires the same numbered suit.");
-  const ranks = [discardTile.rank, ...(chosen as NumberTile[]).map((tile) => tile.rank)].sort((a, b) => a - b);
-  if (ranks[1] !== ranks[0] + 1 || ranks[2] !== ranks[1] + 1) throw new Error("Tiles do not form a Pure Chow.");
+  if (discardTile.kind !== "number") throw new Error("Pure Chow requires a numbered discard.");
+  const southNorth = state.round === "north" && state.north?.format === "south";
+  const numbered = [discardTile, ...(chosen as Tile[])].filter((tile): tile is NumberTile => tile.kind === "number");
+  if (numbered.some((tile) => tile.suit !== discardTile.suit) || (chosen as Tile[]).some((tile) => tile.kind !== "number" && !(southNorth && isSouthNorthJoker(tile)))) throw new Error("Pure Chow requires the same numbered suit.");
+  if (numbered.length !== new Set(numbered.map((tile) => tile.rank)).size || ![discardTile.rank - 2, discardTile.rank - 1, discardTile.rank].some((start) => start >= 1 && start <= 7 && numbered.every((tile) => tile.rank >= start && tile.rank <= start + 2))) throw new Error("Tiles do not form a Pure Chow.");
   const player = state.players[seat];
   return {
     ...state,
@@ -390,13 +420,13 @@ export function claimPureChow(state: EastRoundState, seat: Seat, tileIds: readon
 export function canDeclareConcealedKong(state: EastRoundState, seat: Seat, tileId: string): boolean {
   if (state.status !== "active" || state.phase !== "discard" || state.turn !== seat) return false;
   const tile = state.players[seat].hand.find((candidate) => candidate.id === tileId);
-  return !!tile && !!takeMatching(state.players[seat].hand, tile, 4);
+  return !!tile && !!takeMatchingOrNorthJokers(state, state.players[seat].hand, tile, 4);
 }
 
 export function declareConcealedKong(state: EastRoundState, seat: Seat, tileId: string): EastRoundState {
   if (!canDeclareConcealedKong(state, seat, tileId)) throw new Error("Concealed Kong declaration is not legal now.");
   const target = state.players[seat].hand.find((tile) => tile.id === tileId)!;
-  const kongTiles = takeMatching(state.players[seat].hand, target, 4)!;
+  const kongTiles = takeMatchingOrNorthJokers(state, state.players[seat].hand, target, 4)!;
   const player = state.players[seat];
   const flowerWall = [...state.flowerWall];
   const history: GameEvent[] = [...state.history, { type: "declaredKong", seat, tileId }];
@@ -407,8 +437,44 @@ export function declareConcealedKong(state: EastRoundState, seat: Seat, tileId: 
   }
   kongPlayer.hand.push(replacement);
   history.push({ type: "drew", seat, source: "flowerWall", tileId: replacement.id });
-  if (moveBonusTiles(kongPlayer, flowerWall, history) === "exhausted") {
+  if (!(state.round === "north" && state.north?.format === "south") && moveBonusTiles(kongPlayer, flowerWall, history) === "exhausted") {
     return { ...state, status: "draw", players: { ...state.players, [seat]: kongPlayer }, flowerWall, history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }] };
   }
   return { ...state, players: { ...state.players, [seat]: kongPlayer }, flowerWall, history };
+}
+
+/** West-as-North: a later drawn matching card may replace a visible joker in an exposed Pung/Kong. */
+export function canReplaceNorthExposedJoker(state: EastRoundState, seat: Seat): boolean {
+  if (state.round !== "north" || state.north?.format !== "west" || state.status !== "active" || state.turn !== seat || state.phase !== "discard") return false;
+  return state.players[seat].melds.some((meld) => {
+    if (!meld.exposed || (meld.kind !== "pung" && meld.kind !== "kong")) return false;
+    const joker = meld.tiles.find((tile) => isWestNorthJoker(tile, state.north?.jokerRank));
+    const target = meld.tiles.find((tile) => !isWestNorthJoker(tile, state.north?.jokerRank));
+    return !!joker && !!target && state.players[seat].hand.some((tile) => sameTile(tile, target));
+  });
+}
+
+export function replaceNorthExposedJoker(state: EastRoundState, seat: Seat): EastRoundState {
+  if (!canReplaceNorthExposedJoker(state, seat)) throw new Error("No exposed North joker can be replaced now.");
+  const player = state.players[seat];
+  let reclaimed: Tile | undefined;
+  let matching: Tile | undefined;
+  const melds = player.melds.map((meld) => {
+    if (reclaimed || !meld.exposed || (meld.kind !== "pung" && meld.kind !== "kong")) return meld;
+    const jokerIndex = meld.tiles.findIndex((tile) => isWestNorthJoker(tile, state.north?.jokerRank));
+    const target = meld.tiles.find((tile) => !isWestNorthJoker(tile, state.north?.jokerRank));
+    const replacement = target && player.hand.find((tile) => sameTile(tile, target));
+    if (jokerIndex < 0 || !target || !replacement) return meld;
+    reclaimed = meld.tiles[jokerIndex];
+    matching = replacement;
+    const tiles = [...meld.tiles];
+    tiles[jokerIndex] = replacement;
+    return { ...meld, tiles };
+  });
+  if (!reclaimed || !matching) throw new Error("No exposed North joker can be replaced now.");
+  return {
+    ...state,
+    players: { ...state.players, [seat]: { ...player, hand: [...player.hand.filter((tile) => tile.id !== matching!.id), reclaimed], melds } },
+    history: [...state.history, { type: "replacedJoker", seat, tileId: reclaimed.id }],
+  };
 }

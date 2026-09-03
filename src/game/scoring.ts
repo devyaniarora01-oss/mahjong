@@ -1,6 +1,7 @@
 import type { Seat, Tile } from "./tiles";
 import type { Meld } from "./state";
 import { westHandKind } from "./west-goals";
+import { westNorthHandKind } from "./north-goals";
 
 export type ScorePlayer = { seat: Seat; bonusTiles: Tile[] };
 export type EastRoundWinner = { seat: Seat; concealed: boolean };
@@ -39,6 +40,37 @@ export function settleEastRound(players: Record<Seat, ScorePlayer>, winner?: Eas
   return { transfers, changes };
 }
 
+/** North inherits the selected round's Mahjong payment, but the rulebook removes Flower/Season awards. */
+export function settleNorthEastRound(players: Record<Seat, ScorePlayer>, winner?: EastRoundWinner): EastRoundSettlement {
+  const transfers: ScoreTransfer[] = [];
+  if (winner) addAward(transfers, winner.seat, winner.concealed ? 1000 : 500, `${winner.concealed ? "Concealed" : "Exposed"} Mahjong`);
+  const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
+  for (const transfer of transfers) { changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
+  return { transfers, changes };
+}
+
+/** North follows its chosen South format but never grants Flower/Season awards. */
+export function settleNorthSouthRound(players: Record<Seat, ScorePlayer>, winner: { seat: Seat; cardScore: number }, pot = 0): EastRoundSettlement {
+  const transfers: ScoreTransfer[] = [];
+  addAward(transfers, winner.seat, winner.cardScore, "North South Card Mahjong");
+  if (pot > 0) transfers.push({ from: winner.seat, to: winner.seat, amount: pot, reason: "North Round buy pot" });
+  const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
+  for (const transfer of transfers) if (transfer.from !== transfer.to) { changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
+  return { transfers, changes };
+}
+
+/** North follows its chosen West format but never grants Flower/Season awards. */
+export function settleNorthWestRound(players: Record<Seat, WestScorePlayer>, winner?: EastRoundWinner, jokerRank?: number): EastRoundSettlement {
+  const transfers: ScoreTransfer[] = [];
+  if (winner) {
+    const kind = westNorthHandKind(players[winner.seat].hand, players[winner.seat].melds, jokerRank);
+    if (kind) addAward(transfers, winner.seat, westAwardAmount(kind, winner.concealed), `North West ${westAwardLabel(kind)}`);
+  }
+  const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
+  for (const transfer of transfers) { changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
+  return { transfers, changes };
+}
+
 /** South Card score: the winner receives their printed card value from each opponent, doubled where East is involved. */
 export function settleSouthRound(players: Record<Seat, ScorePlayer>, winner: { seat: Seat; cardScore: number }, pot = 0): EastRoundSettlement {
   const transfers: ScoreTransfer[] = [];
@@ -52,30 +84,32 @@ export function settleSouthRound(players: Record<Seat, ScorePlayer>, winner: { s
 
 type WestScorePlayer = ScorePlayer & { hand: Tile[]; melds: Meld[] };
 
+const westAwardAmount = (kind: NonNullable<ReturnType<typeof westHandKind>>, concealed: boolean): number => ({
+  sameSuit: concealed ? 2_000 : 1_000,
+  honours: concealed ? 2_500 : 1_500,
+  fourExposedKongs: 1_500,
+  threeConcealedKongs: 2_000,
+  concealedCleanMix: 2_000,
+  exposedCleanMix: 1_500,
+  major: 1_500,
+}[kind]);
+
+const westAwardLabel = (kind: NonNullable<ReturnType<typeof westHandKind>>): string => ({
+  sameSuit: "same-suit Pungs/Kongs/Pairs",
+  honours: "honours-only Pungs/Kongs/Pairs",
+  fourExposedKongs: "four exposed Kongs with a Pair",
+  threeConcealedKongs: "three concealed Kongs path",
+  concealedCleanMix: "concealed clean Pung/Kong/Pair path",
+  exposedCleanMix: "exposed clean Pung/Kong/Pair path",
+  major: "Major Hand",
+}[kind]);
+
 /** West table amounts are received from each player, doubled where East is involved. */
 export function settleWestRound(players: Record<Seat, WestScorePlayer>, winner?: EastRoundWinner): EastRoundSettlement {
   const transfers: ScoreTransfer[] = [];
   if (winner) {
     const kind = westHandKind(players[winner.seat].hand, players[winner.seat].melds);
-    const base: Record<NonNullable<typeof kind>, number> = {
-      sameSuit: winner.concealed ? 2_000 : 1_000,
-      honours: winner.concealed ? 2_500 : 1_500,
-      fourExposedKongs: 1_500,
-      threeConcealedKongs: 2_000,
-      concealedCleanMix: 2_000,
-      exposedCleanMix: 1_500,
-      major: 1_500,
-    };
-    const labels: Record<NonNullable<typeof kind>, string> = {
-      sameSuit: "West same-suit Pungs/Kongs/Pairs",
-      honours: "West honours-only Pungs/Kongs/Pairs",
-      fourExposedKongs: "West four exposed Kongs with a Pair",
-      threeConcealedKongs: "West three concealed Kongs path",
-      concealedCleanMix: "West concealed clean Pung/Kong/Pair path",
-      exposedCleanMix: "West exposed clean Pung/Kong/Pair path",
-      major: "West Major Hand",
-    };
-    if (kind) addAward(transfers, winner.seat, base[kind], labels[kind]);
+    if (kind) addAward(transfers, winner.seat, westAwardAmount(kind, winner.concealed), `West ${westAwardLabel(kind)}`);
   }
   for (const seat of seats) addFlowerAwards(players[seat], transfers);
   const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
