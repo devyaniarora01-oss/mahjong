@@ -127,6 +127,7 @@ export function createEastRound(deck: readonly Tile[], diceTotal: number, option
   for (const seat of SEATS) {
     if (!options.retainBonusTiles && moveBonusTiles(players[seat], flowerWall, history) === "exhausted") {
       return {
+        round: "east",
         status: "draw",
         phase: "claim",
         turn: "east",
@@ -139,7 +140,7 @@ export function createEastRound(deck: readonly Tile[], diceTotal: number, option
     }
   }
 
-  return { status: "active", phase: "discard", turn: "east", players, humanSeat: "east", drawPile: dealingQueue, flowerWall, history };
+  return { round: "east", status: "active", phase: "discard", turn: "east", players, humanSeat: "east", drawPile: dealingQueue, flowerWall, history };
 }
 
 export function discard(state: EastRoundState, seat: Seat, tileId: string): EastRoundState {
@@ -336,8 +337,20 @@ const takeMatchingOrNorthJokers = (state: EastRoundState, hand: Tile[], target: 
   return result.length === count ? result : undefined;
 };
 
+/** South actions must serve the holder's dealt card, not the generic East hand. */
+const southCardAllowsSet = (state: EastRoundState, seat: Seat, set: "pung" | "pureChow" | "kong"): boolean => {
+  const usesSouthCards = state.round === "south" || (state.round === "north" && state.north?.format === "south");
+  if (!usesSouthCards || !state.south) return true;
+  const card = state.south.cards[seat];
+  if (set === "pung") return /\bPungs?\b/i.test(card.goal);
+  if (set === "kong") return /\bKongs?\b/i.test(card.goal);
+  // "Crazy Chows" is the catalogue's Mixed-Chow-only card. Mixed Chows are
+  // not defined by the supplied rules, so a Pure Chow must not be substituted.
+  return card.id !== "crazy-chows" && /\bChows?\b/i.test(card.goal);
+};
+
 export function canClaimPung(state: EastRoundState, seat: Seat): boolean {
-  return state.status === "active" && state.phase === "claim" && !!state.lastDiscard && mahjongClaimants(state).length === 0 && !!takeMatchingOrNorthJokers(state, state.players[seat].hand, state.lastDiscard.tile, 2);
+  return southCardAllowsSet(state, seat, "pung") && state.status === "active" && state.phase === "claim" && !!state.lastDiscard && mahjongClaimants(state).length === 0 && !!takeMatchingOrNorthJokers(state, state.players[seat].hand, state.lastDiscard.tile, 2);
 }
 
 export function claimPung(state: EastRoundState, seat: Seat): EastRoundState {
@@ -381,7 +394,7 @@ export function claimExposedKong(state: EastRoundState, seat: Seat): EastRoundSt
 
 export function canClaimPureChow(state: EastRoundState, seat: Seat): boolean {
   const discardTile = state.lastDiscard?.tile;
-  if (state.round === "west" || (state.round === "north" && state.north?.format === "west") || state.status !== "active" || state.phase !== "claim" || !discardTile || mahjongClaimants(state).length > 0 || seat !== nextSeat(state.lastDiscard!.by) || discardTile.kind !== "number") return false;
+  if (!southCardAllowsSet(state, seat, "pureChow") || state.round === "west" || (state.round === "north" && state.north?.format === "west") || state.status !== "active" || state.phase !== "claim" || !discardTile || mahjongClaimants(state).length > 0 || seat !== nextSeat(state.lastDiscard!.by) || discardTile.kind !== "number") return false;
   const southNorth = state.round === "north" && state.north?.format === "south";
   const candidates = state.players[seat].hand.filter((tile) => (tile.kind === "number" && tile.suit === discardTile.suit) || (southNorth && isSouthNorthJoker(tile)));
   for (const first of candidates) for (const second of candidates) {
@@ -418,7 +431,7 @@ export function claimPureChow(state: EastRoundState, seat: Seat, tileIds: readon
 }
 
 export function canDeclareConcealedKong(state: EastRoundState, seat: Seat, tileId: string): boolean {
-  if (state.status !== "active" || state.phase !== "discard" || state.turn !== seat) return false;
+  if (!southCardAllowsSet(state, seat, "kong") || state.status !== "active" || state.phase !== "discard" || state.turn !== seat) return false;
   const tile = state.players[seat].hand.find((candidate) => candidate.id === tileId);
   return !!tile && !!takeMatchingOrNorthJokers(state, state.players[seat].hand, tile, 4);
 }

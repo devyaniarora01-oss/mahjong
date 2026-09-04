@@ -89,7 +89,7 @@ const westAwardAmount = (kind: NonNullable<ReturnType<typeof westHandKind>>, con
   honours: concealed ? 2_500 : 1_500,
   fourExposedKongs: 1_500,
   threeConcealedKongs: 2_000,
-  concealedCleanMix: 2_000,
+  concealedCleanMix: 1_500,
   exposedCleanMix: 1_500,
   major: 1_500,
 }[kind]);
@@ -99,8 +99,8 @@ const westAwardLabel = (kind: NonNullable<ReturnType<typeof westHandKind>>): str
   honours: "honours-only Pungs/Kongs/Pairs",
   fourExposedKongs: "four exposed Kongs with a Pair",
   threeConcealedKongs: "three concealed Kongs path",
-  concealedCleanMix: "concealed clean Pung/Kong/Pair path",
-  exposedCleanMix: "exposed clean Pung/Kong/Pair path",
+  concealedCleanMix: "Clean Mix: one numbered suit with Honour tiles",
+  exposedCleanMix: "Clean Mix: one numbered suit with Honour tiles",
   major: "Major Hand",
 }[kind]);
 
