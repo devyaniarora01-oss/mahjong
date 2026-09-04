@@ -155,7 +155,7 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
     const pungs = analysis.pungs.map((item) => `Pung: ${item} ×3 — three matching tiles; useful when your South Card asks for Pungs.`);
     const developing = analysis.developingChows.map((item) => `${item.tiles} — a possible sequence; keep it only if it helps the goal on your South Card.`);
     const weak = analysis.weakTiles.slice(0, 3).map((item) => `${item} — it does not currently match a pair, Pung, or sequence in your visible hand. Check whether it serves your South Card before keeping it.`);
-    return { overview: `Your South Card is ${card.title}: ${card.goal} This is your personal Mahjong target for this round.`, progress: `You have ${hand.length} concealed tiles. Compare every group you build against ${card.title}, not against the East Round target.${state.round === "north" ? " Flowers and Seasons are concealed jokers here, but cannot form a Pair." : ""}`, built: [...pairs, ...pungs], developing, weak, scoring: [`Completing ${card.title} records ${card.score.toLocaleString()} points.${card.bonus ? ` ${card.bonus}` : ""}${state.round === "north" ? " North does not add Flower/Season awards." : ""}`], focus: `Your immediate focus is ${card.goal} Keep tiles that directly help this requirement; a useful-looking East Round Chow is not automatically useful in South.` };
+    return { overview: `Your South Card is ${card.title}: ${card.goal} This is your personal Mahjong target for this round.`, progress: `You have ${hand.length} concealed tiles. Compare every group you build against ${card.title}, not against the East Round target.${state.round === "north" ? " Flowers and Seasons are concealed jokers here, but cannot form a Pair." : ""}`, built: [...pairs, ...pungs], developing, weak, scoring: [`Completing ${card.title} records ${card.score.toLocaleString()} points.${card.bonus ? ` ${card.bonus}` : ""}${state.round === "north" ? " North does not add Flower/Season awards." : ""}`, "Score focus: build toward your own card’s printed value; an attractive East-style group is only worth keeping if it helps that card."], focus: `Your immediate focus is ${card.goal} Keep tiles that directly help this requirement; a useful-looking East Round Chow is not automatically useful in South.` };
   }
   if (westFormat) {
     const groups = countGroups(hand);
@@ -171,7 +171,7 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
       built: [...pairs, ...pungs, ...kongs],
       developing: groups.filter((group) => group.length === 2).map((group) => `${tileLabel(group[0])} ×2 — one more matching tile makes a Pung; two matching tiles make a Kong.`),
       weak,
-      scoring: ["West Round scoring depends on the legal hand path you finish: the result screen names the applicable West table award."],
+      scoring: ["West scoring rewards the legal path you finish. Keeping one numbered suit with honours where allowed preserves the Clean Hand routes."],
       focus: kongs.length || player.melds.some((meld) => meld.kind === "kong") ? "You have met the West Kong requirement. Preserve matching tiles while keeping a legal one-suit or honours path." : "Your immediate West requirement is to grow a matching group into a Kong while avoiding unrelated suits.",
     };
   }
@@ -197,7 +197,10 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
   const weak = analysis.weakTiles.slice(0, 3).map((label) => `${label} — it is not currently in a pair, Pung, or consecutive numbered sequence.`);
   const built = [...pairs, ...pungs, ...kongs, ...chows];
   const bonusRanks = player.bonusTiles.filter((tile) => tile.kind === "flower" || tile.kind === "season").map((tile) => tile.rank);
-  const scoring = player.bonusTiles.length ? [state.round === "north" ? `Flower/Season bonus tiles: ${player.bonusTiles.length}. They stay outside your hand and are replaced normally, but do not add North Round score awards.` : `Flower/Season bonus tiles: ${player.bonusTiles.length}. They stay outside your hand and are recorded separately when the round is scored.`] : [];
+  const scoring = [state.round === "north"
+    ? "East-as-North uses the East Mahjong award. An East-involved payment is doubled. Flower/Season tiles do not add North Round awards."
+    : "East Mahjong awards are recorded when a legal hand is completed. Any payment involving East is doubled."];
+  if (player.bonusTiles.length) scoring.push(state.round === "north" ? `Flower/Season bonus tiles: ${player.bonusTiles.length}. They stay outside your hand and are replaced normally, but do not add North Round score awards.` : `Flower/Season bonus tiles: ${player.bonusTiles.length}. They stay outside your hand and are recorded separately when the round is scored.`);
   const seatRank: Record<Seat, number> = { east: 1, south: 2, west: 3, north: 4 };
   if (state.round !== "north" && bonusRanks.filter((rank) => rank === seatRank[seat]).length >= 2) scoring.push("You have the two Flowers/Seasons matching your seat wind. That is a seating-wind bonus award when the round is scored.");
   if (state.round !== "north" && bonusRanks.filter((rank) => rank === 1).length >= 2) scoring.push("You have the East-numbered Flower/Season pair. That is an East round-wind bonus award when the round is scored.");
@@ -266,7 +269,7 @@ function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption
       tileId: tile.id,
       title: state.phase === "charleston" ? `Pass ${tileLabel(tile)}` : `Discard ${tileLabel(tile)}`,
       reason: why,
-      preserves: `Keep ${keep}. Those tiles currently have the clearest connection to ${card.title}.`,
+      preserves: `Keep ${keep}. Those tiles currently have the clearest connection to ${card.title}, the ${card.score.toLocaleString()}-point scoring target for this hand.`,
       lookingFor: `Your card asks for: ${card.goal}`,
       tableWatch: visibleTableWatch(state, seat, potentialDrawKeys(hand.filter((item) => item.id !== tile.id))),
       alternative: index === 0 && candidates[1] ? `${tileLabel(candidates[1])} and ${tileLabel(candidates[2] ?? candidates[1])} are the other two tiles I would pass in this Charleston step.` : undefined,
@@ -308,7 +311,7 @@ function westBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption[
       tileId: tile.id,
       title: state.phase === "charleston" ? `Pass ${tileLabel(tile)}` : `Discard ${tileLabel(tile)}`,
       reason,
-      preserves: keep.length ? `Keep ${keep.map(tileLabel).join(", ")}; matching tiles can grow into West Pungs and Kongs.` : "Keep your strongest matching tiles and stay as close as possible to one numbered suit.",
+      preserves: keep.length ? `Keep ${keep.map(tileLabel).join(", ")}; matching tiles can grow into West Pungs and Kongs while preserving a higher-value clean-hand scoring route.` : "Keep your strongest matching tiles and stay as close as possible to one numbered suit; that preserves the West Clean Hand scoring routes.",
       lookingFor: matching === 1 ? `Look for another ${tileLabel(tile)} only if you decide to build it into a Pair, Pung, or Kong. Your required West milestone is at least one Kong.` : `A third matching ${tileLabel(tile)} makes a Pung; a fourth makes a Kong.`,
       tableWatch: visibleTableWatch(state, seat, potentialDrawKeys(hand.filter((item) => item.id !== tile.id))),
       alternative: next ? `${tileLabel(next)} is the next alternative because it has a similarly limited matching-tile path.` : undefined,

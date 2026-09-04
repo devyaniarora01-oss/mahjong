@@ -33,7 +33,7 @@ export function addFlowerAwards(player: ScorePlayer, transfers: ScoreTransfer[])
 /** Exact East Round payments and documented Flower/Season awards. */
 export function settleEastRound(players: Record<Seat, ScorePlayer>, winner?: EastRoundWinner): EastRoundSettlement {
   const transfers: ScoreTransfer[] = [];
-  if (winner) addAward(transfers, winner.seat, winner.concealed ? 1000 : 500, `${winner.concealed ? "Concealed" : "Exposed"} Mahjong`);
+  if (winner) addAward(transfers, winner.seat, winner.concealed ? 1000 : 500, "Mahjong");
   for (const seat of seats) addFlowerAwards(players[seat], transfers);
   const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
   for (const transfer of transfers) { changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
@@ -43,7 +43,7 @@ export function settleEastRound(players: Record<Seat, ScorePlayer>, winner?: Eas
 /** North inherits the selected round's Mahjong payment, but the rulebook removes Flower/Season awards. */
 export function settleNorthEastRound(players: Record<Seat, ScorePlayer>, winner?: EastRoundWinner): EastRoundSettlement {
   const transfers: ScoreTransfer[] = [];
-  if (winner) addAward(transfers, winner.seat, winner.concealed ? 1000 : 500, `${winner.concealed ? "Concealed" : "Exposed"} Mahjong`);
+  if (winner) addAward(transfers, winner.seat, winner.concealed ? 1000 : 500, "Mahjong");
   const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
   for (const transfer of transfers) { changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
   return { transfers, changes };
