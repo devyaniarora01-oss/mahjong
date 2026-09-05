@@ -20,6 +20,18 @@ const suitLabel = (suit: string): string => titleCase(suit);
 const countGroups = (hand: readonly Tile[]): Tile[][] => Object.values(hand.reduce<Record<string, Tile[]>>((groups, tile) => ({ ...groups, [identity(tile)]: [...(groups[identity(tile)] ?? []), tile] }), {}));
 
 /**
+ * The first Coach option is always the weakest current candidate. Extra options
+ * appear only when they are genuinely close alternatives, rather than padding
+ * every answer to three rows.
+ */
+function closeAlternatives<T>(sorted: readonly T[], value: (item: T) => number): T[] {
+  const first = sorted[0];
+  if (!first) return [];
+  const threshold = value(first) + 22;
+  return sorted.filter((item, index) => index === 0 || value(item) <= threshold).slice(0, 3);
+}
+
+/**
  * Opponent concealed hands stay private. This only considers tiles that are
  * visibly declared on the table, which are genuinely no longer drawable.
  */
@@ -255,7 +267,12 @@ function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption
     if (tile.kind === "number" && goal.includes("odd-numbered") && tile.rank % 2 === 1) value += 55;
     return value;
   };
-  const candidates = [...hand].sort((a, b) => usefulValue(a) - usefulValue(b) || tileLabel(a).localeCompare(tileLabel(b))).slice(0, 3);
+  const sortedCandidates = [...hand].sort((a, b) => usefulValue(a) - usefulValue(b) || tileLabel(a).localeCompare(tileLabel(b)));
+  // Charleston genuinely needs three selected tiles. A normal South discard
+  // recommendation should not invent extra alternatives.
+  const candidates = state.phase === "charleston"
+    ? sortedCandidates.slice(0, 3)
+    : closeAlternatives(sortedCandidates, usefulValue);
   const strongerTiles = [...hand].filter((tile) => !candidates.some((candidate) => candidate.id === tile.id)).sort((a, b) => usefulValue(b) - usefulValue(a)).slice(0, 3);
   const keep = strongerTiles.length
     ? strongerTiles.map(tileLabel).join(", ")
@@ -307,10 +324,10 @@ function westBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption[
     if (tile.kind === "number" && numberedSuits.size > 1 && tile.suit !== preferredSuit) result -= 120;
     return result;
   };
-  const candidates = [...hand]
+  const sortedCandidates = [...hand]
     .filter((tile, index, all) => all.findIndex((other) => identity(other) === identity(tile)) === index)
-    .sort((left, right) => value(left) - value(right) || tileLabel(left).localeCompare(tileLabel(right)))
-    .slice(0, 3);
+    .sort((left, right) => value(left) - value(right) || tileLabel(left).localeCompare(tileLabel(right)));
+  const candidates = closeAlternatives(sortedCandidates, value);
   return candidates.map((tile, index) => {
     const matching = copies(tile);
     const next = candidates[index + 1];
@@ -341,6 +358,9 @@ export function bestMoveOptions(state: EastRoundState, seat: Seat): CoachingOpti
   if (state.round === "west" || (state.round === "north" && state.north?.format === "west")) return westBestMoveOptions(state, seat);
   const hand = state.players[seat].hand;
   const copies = (tile: Tile) => hand.filter((other) => identity(other) === identity(tile)).length;
+  const alreadyInExposedMatchingGroup = (tile: Tile) => state.players[seat].melds.some((meld) =>
+    meld.exposed && (meld.kind === "pung" || meld.kind === "kong") && meld.tiles.some((meldTile) => identity(meldTile) === identity(tile)),
+  );
   const sameRankOtherSuits = (tile: Tile) => tile.kind !== "number" ? [] : hand.filter((other): other is Extract<Tile, { kind: "number" }> => other.kind === "number" && other.id !== tile.id && other.rank === tile.rank && other.suit !== tile.suit);
   const chowPaths = (tile: Tile) => {
     if (tile.kind !== "number") return [] as { held: number[]; missing: number[] }[];
@@ -352,6 +372,9 @@ export function bestMoveOptions(state: EastRoundState, seat: Seat): CoachingOpti
   const score = (tile: Tile) => {
     const matching = copies(tile);
     let value = matching >= 3 ? 90 : matching === 2 ? 60 : 0;
+    // A later matching draw does not enlarge an exposed Pung under the current
+    // Kong policy. Treat it as weaker unless it has another visible use.
+    if (alreadyInExposedMatchingGroup(tile) && matching === 1) value -= 35;
     if (tile.kind === "number") {
       if (isInCompletePureChow(tile, hand)) value += 100;
       for (const path of chowPaths(tile)) value += path.held.length === 2 ? 45 : path.held.length === 1 ? 22 : 0;
@@ -364,7 +387,11 @@ export function bestMoveOptions(state: EastRoundState, seat: Seat): CoachingOpti
     const strongest = candidates[0];
     if (!strongest) return "the rest of your hand open for a new useful draw";
     const matching = copies(strongest);
-    if (matching >= 2) return `your ${tileLabel(strongest)} pair, which can stay as the pair your winning hand needs${matching >= 3 ? " or grow into a Pung" : ""}`;
+    // A completed matching group must take precedence over the smaller pattern
+    // it contains. Three 2 Bamboos are a Pung, not a "pair that can grow".
+    if (matching >= 4) return `your ${tileLabel(strongest)} Kong, a completed four-tile matching group`;
+    if (matching === 3) return `your ${tileLabel(strongest)} Pung, a completed three-tile matching group`;
+    if (matching === 2) return `your ${tileLabel(strongest)} pair, which can stay as the pair your winning hand needs or grow into a Pung`;
     if (strongest.kind === "number") {
       const path = chowPaths(strongest).find((item) => item.held.length > 0);
       if (path) return `${tileLabel(strongest)} with ${path.held.map((rank) => `${rank} ${suitLabel(strongest.suit)}`).join(" and ")}, which is developing toward a Pure Chow`;
@@ -374,6 +401,7 @@ export function bestMoveOptions(state: EastRoundState, seat: Seat): CoachingOpti
   const whyWeak = (tile: Tile) => {
     const matching = copies(tile);
     if (matching >= 2) return `You already have ${matching} copies, so this tile is supporting a ${matching === 2 ? "Pair" : "Pung"}; it is not a natural early discard.`;
+    if (alreadyInExposedMatchingGroup(tile)) return `You already have an exposed Pung of ${tileLabel(tile)}. This extra ${tileLabel(tile)} cannot be added to that declared Pung as a Kong, so it has limited value unless it helps a different concealed pattern.`;
     if (tile.kind !== "number") return `${tileLabel(tile)} cannot make a Pure Chow because Winds and Dragons are not numbered suit tiles. You have no matching ${tileLabel(tile)} yet, so its only current route is drawing another copy for a Pair, then a third for a Pung.`;
     const paths = chowPaths(tile);
     const bestPath = paths.sort((left, right) => right.held.length - left.held.length)[0];
@@ -385,12 +413,16 @@ export function bestMoveOptions(state: EastRoundState, seat: Seat): CoachingOpti
     return `It is already part of a strong Pure Chow path, so it is only an alternative if you deliberately choose to break that structure.`;
   };
   const uniqueTiles = [...hand].filter((tile, index, all) => all.findIndex((other) => identity(other) === identity(tile)) === index);
-  const ranked = uniqueTiles.sort((left, right) => score(left) - score(right) || tileLabel(left).localeCompare(tileLabel(right))).slice(0, 3);
+  const ranked = closeAlternatives(
+    uniqueTiles.sort((left, right) => score(left) - score(right) || tileLabel(left).localeCompare(tileLabel(right))),
+    score,
+  );
   return ranked.map((tile, index) => {
     const next = ranked[index + 1];
     const path = tile.kind === "number" ? chowPaths(tile).sort((left, right) => right.held.length - left.held.length)[0] : undefined;
     let lookingFor = `Prioritize draws that improve the groups you are keeping rather than replacing this tile.`;
-    if (copies(tile) === 1) lookingFor = `Another ${tileLabel(tile)} would make a Pair; a third matching tile would make a Pung.`;
+    if (alreadyInExposedMatchingGroup(tile) && copies(tile) === 1) lookingFor = `This tile does not extend your exposed Pung. Keep your Pair and other developing groups instead.`;
+    else if (copies(tile) === 1) lookingFor = `Another ${tileLabel(tile)} would make a Pair; a third matching tile would make a Pung.`;
     else if (tile.kind === "number" && path?.held.length === 1) lookingFor = `${path.missing[0]} ${suitLabel(tile.suit)} would complete the Pure Chow path with ${path.held[0]} ${suitLabel(tile.suit)} and ${tileLabel(tile)}.`;
     return {
       tileId: tile.id,

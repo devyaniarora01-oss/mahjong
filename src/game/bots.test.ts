@@ -27,6 +27,24 @@ describe("deterministic bot integration", () => {
     expect(action).toEqual({ type: "pung", seat: "west" });
   });
 
+  it("keeps a completed Pung instead of discarding it before a weak honour", () => {
+    const tiles = createTileSet();
+    const tile = (id: string) => tiles.find((item) => item.id === id) ?? (() => { throw new Error(`Missing ${id}`); })();
+    const base = createEastRound(tiles, 8);
+    const hand = [
+      tile("bamboo-2-1"), tile("bamboo-2-2"), tile("bamboo-2-3"),
+      tile("character-3-1"), tile("character-4-1"),
+      tile("dot-5-1"), tile("dot-6-1"), tile("dot-7-1"),
+      tile("bamboo-8-1"), tile("bamboo-8-2"), tile("character-9-1"),
+      tile("wind-east-1"), tile("wind-south-1"), tile("dragon-red-1"),
+    ];
+    const staged = { ...base, phase: "discard" as const, turn: "south" as const, players: { ...base.players, south: { ...base.players.south, hand } } };
+
+    const action = chooseBotTurnAction(staged, "south");
+    expect(action).toMatchObject({ type: "discard" });
+    expect(action?.type === "discard" && action.tileId.startsWith("bamboo-2")).toBe(false);
+  });
+
   it("West bots shed extra numbered suits before their chosen suit", () => {
     const tiles = createTileSet();
     const tile = (suit: "bamboo" | "character" | "dot", rank: number, copy = 0) => tiles.filter((item) => item.kind === "number" && item.suit === suit && item.rank === rank)[copy]!;

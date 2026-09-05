@@ -50,6 +50,8 @@ export function applyCharleston(state: EastRoundState, choices: CharlestonChoice
   return { ...state, players, phase: nextStep === SOUTH_CHARLESTON_PAIRS.length ? "discard" : "charleston", turn: "east", south: { ...state.south, charlestonStep: nextStep } };
 }
 
+// Turn order runs East → South → West → North. The South buy comes only from
+// the player on your left: the player who acts after you, not before you.
 const leftOf = (seat: Seat): Seat => SEATS[(SEATS.indexOf(seat) + SEATS.length - 1) % SEATS.length];
 
 /** South-only buy: the player to the discarder’s left may take the discard for 100 into the shared pot, then must discard immediately. */

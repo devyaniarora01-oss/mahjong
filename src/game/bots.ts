@@ -15,6 +15,7 @@ import {
   passClaims,
   type EastRoundState,
 } from "./state";
+import { bestMoveOptions } from "./coaching";
 import { SEATS, type Seat, type Tile } from "./tiles";
 
 export type BotAction =
@@ -61,6 +62,13 @@ const identity = (tile: Tile) => tile.kind === "number" ? `${tile.kind}-${tile.s
 
 export function chooseBotCharlestonTileIds(state: EastRoundState, seat: Seat): string[] {
   const hand = state.players[seat].hand;
+  const southFormat = state.round === "south" || (state.round === "north" && state.north?.format === "south");
+  // South Cards are personal targets, so South bots use the same card-aware
+  // Charleston recommendations shown to the human player.
+  if (southFormat) {
+    const choices = bestMoveOptions(state, seat).map((option) => option.tileId);
+    if (choices.length === 3) return choices;
+  }
   return (isWestFormat(state) ? westSheddingOrder(hand) : [...hand].sort((left, right) => left.id.localeCompare(right.id))).slice(0, 3).map((tile) => tile.id);
 }
 
@@ -76,7 +84,7 @@ const westBotKeepsTile = (state: EastRoundState, seat: Seat, tileId: string): bo
   return !tile || tile.kind !== "number" || tile.suit === westPreferredSuit(state.players[seat].hand);
 };
 
-/** A deliberately simple, deterministic policy; it does not evaluate hand strength. */
+/** A deterministic policy that keeps completed and developing visible structures. */
 export function chooseBotTurnAction(state: EastRoundState, seat: Seat): BotAction | undefined {
   if (state.status !== "active" || state.turn !== seat) return undefined;
   if (state.phase === "draw") return { type: "draw", seat };
@@ -84,7 +92,8 @@ export function chooseBotTurnAction(state: EastRoundState, seat: Seat): BotActio
   if (canDeclareMahjong(state, seat)) return { type: "mahjong", seat };
   const kongTile = sortedTileIds(state, seat).find((tileId) => canDeclareConcealedKong(state, seat, tileId) && westBotKeepsTile(state, seat, tileId));
   if (kongTile) return { type: "kong", seat, tileId: kongTile };
-  const tileId = (isWestFormat(state) ? westSheddingOrder(state.players[seat].hand).map((tile) => tile.id) : sortedTileIds(state, seat))[0];
+  const coachedChoice = !isWestFormat(state) ? bestMoveOptions(state, seat)[0]?.tileId : undefined;
+  const tileId = coachedChoice ?? (isWestFormat(state) ? westSheddingOrder(state.players[seat].hand).map((tile) => tile.id) : sortedTileIds(state, seat))[0];
   return tileId ? { type: "discard", seat, tileId } : undefined;
 }
 

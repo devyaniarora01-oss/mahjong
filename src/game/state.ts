@@ -5,7 +5,7 @@ import {
   type Tile,
   needsFlowerWallReplacement,
 } from "./tiles";
-import { settleEastRound, settleNorthEastRound, settleNorthSouthRound, settleNorthWestRound, settleSouthRound, settleWestRound } from "./scoring";
+import { settleDrawRound, settleEastRound, settleNorthEastRound, settleNorthSouthRound, settleNorthWestRound, settleSouthRound, settleWestRound } from "./scoring";
 import type { SouthCard } from "./south-cards";
 import { matchesSouthCard } from "./south-goals";
 import { isWestMahjongHand } from "./west-goals";
@@ -71,6 +71,28 @@ const asPlayers = (): Record<Seat, PlayerState> => ({
   west: emptyPlayer("west"),
   north: emptyPlayer("north"),
 });
+
+/** Settle bonus awards at a draw and preserve the scored table for the next round. */
+function endAsDraw(
+  state: EastRoundState,
+  players: Record<Seat, PlayerState>,
+  history: GameEvent[],
+  reason: Extract<GameEvent, { type: "handDrawn" }> ["reason"],
+  updates: Partial<EastRoundState> = {},
+): EastRoundState {
+  const settlement = settleDrawRound(players, state.round !== "north");
+  const scoredPlayers = Object.fromEntries(SEATS.map((seat) => [seat, {
+    ...players[seat],
+    score: players[seat].score + settlement.changes[seat],
+  }])) as Record<Seat, PlayerState>;
+  return {
+    ...state,
+    ...updates,
+    status: "draw",
+    players: scoredPlayers,
+    history: [...history, { type: "handDrawn", reason }],
+  };
+}
 
 function moveBonusTiles(player: PlayerState, flowerWall: Tile[], history: GameEvent[]): "ok" | "exhausted" {
   while (true) {
@@ -166,20 +188,16 @@ export function passClaims(state: EastRoundState): EastRoundState {
 export function drawFromPile(state: EastRoundState, seat: Seat): EastRoundState {
   if (state.status !== "active" || state.phase !== "draw" || state.turn !== seat) throw new Error("Draw is not legal now.");
   const tile = state.drawPile[0];
-  if (!tile) return { ...state, status: "draw", history: [...state.history, { type: "handDrawn", reason: "drawPileExhausted" }] };
+  if (!tile) return endAsDraw(state, state.players, state.history, "drawPileExhausted");
   const player = { ...state.players[seat], hand: [...state.players[seat].hand, tile] };
   const flowerWall = [...state.flowerWall];
   const history: GameEvent[] = [...state.history, { type: "drew", seat, source: "drawPile", tileId: tile.id }];
   const southNorthJokers = state.round === "north" && state.north?.format === "south";
   if (!southNorthJokers && moveBonusTiles(player, flowerWall, history) === "exhausted") {
-    return {
-      ...state,
-      status: "draw",
-      players: { ...state.players, [seat]: player },
+    return endAsDraw(state, { ...state.players, [seat]: player }, history, "flowerWallExhausted", {
       drawPile: state.drawPile.slice(1),
       flowerWall,
-      history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }],
-    };
+    });
   }
   return { ...state, phase: "discard", players: { ...state.players, [seat]: player }, drawPile: state.drawPile.slice(1), flowerWall, history };
 }
@@ -383,11 +401,11 @@ export function claimExposedKong(state: EastRoundState, seat: Seat): EastRoundSt
   const replacement = state.flowerWall[0];
   const kongPlayer = { ...player, hand: replacement ? [...hand, replacement] : hand, melds: [...player.melds, { kind: "kong" as const, tiles: [...claimed, state.lastDiscard.tile], exposed: true }], hasCalled: true };
   const history: GameEvent[] = [...state.history, { type: "claimedKong", seat, from: state.lastDiscard.by, tileId: state.lastDiscard.tile.id }];
-  if (!replacement) return { ...state, status: "draw", lastDiscard: undefined, players: { ...state.players, [seat]: kongPlayer }, history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }] };
+  if (!replacement) return endAsDraw(state, { ...state.players, [seat]: kongPlayer }, history, "flowerWallExhausted", { lastDiscard: undefined });
   history.push({ type: "drew", seat, source: "flowerWall", tileId: replacement.id });
   const flowerWall = state.flowerWall.slice(1);
   if (!(state.round === "north" && state.north?.format === "south") && moveBonusTiles(kongPlayer, flowerWall, history) === "exhausted") {
-    return { ...state, status: "draw", lastDiscard: undefined, flowerWall, players: { ...state.players, [seat]: kongPlayer }, history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }] };
+    return endAsDraw(state, { ...state.players, [seat]: kongPlayer }, history, "flowerWallExhausted", { lastDiscard: undefined, flowerWall });
   }
   return { ...state, phase: "discard", turn: seat, lastDiscard: undefined, flowerWall, players: { ...state.players, [seat]: kongPlayer }, history };
 }
@@ -446,12 +464,12 @@ export function declareConcealedKong(state: EastRoundState, seat: Seat, tileId: 
   const kongPlayer = { ...player, hand: player.hand.filter((tile) => !kongTiles.some((used) => used.id === tile.id)), melds: [...player.melds, { kind: "kong" as const, tiles: kongTiles, exposed: false }] };
   const replacement = flowerWall.shift();
   if (!replacement) {
-    return { ...state, status: "draw", players: { ...state.players, [seat]: kongPlayer }, flowerWall, history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }] };
+    return endAsDraw(state, { ...state.players, [seat]: kongPlayer }, history, "flowerWallExhausted", { flowerWall });
   }
   kongPlayer.hand.push(replacement);
   history.push({ type: "drew", seat, source: "flowerWall", tileId: replacement.id });
   if (!(state.round === "north" && state.north?.format === "south") && moveBonusTiles(kongPlayer, flowerWall, history) === "exhausted") {
-    return { ...state, status: "draw", players: { ...state.players, [seat]: kongPlayer }, flowerWall, history: [...history, { type: "handDrawn", reason: "flowerWallExhausted" }] };
+    return endAsDraw(state, { ...state.players, [seat]: kongPlayer }, history, "flowerWallExhausted", { flowerWall });
   }
   return { ...state, players: { ...state.players, [seat]: kongPlayer }, flowerWall, history };
 }

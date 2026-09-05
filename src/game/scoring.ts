@@ -40,6 +40,21 @@ export function settleEastRound(players: Record<Seat, ScorePlayer>, winner?: Eas
   return { transfers, changes };
 }
 
+/**
+ * A drawn hand has no Mahjong award, but Flower/Season awards already earned
+ * during the hand still settle. North explicitly has no such bonus awards.
+ */
+export function settleDrawRound(players: Record<Seat, ScorePlayer>, includeFlowerAwards: boolean): EastRoundSettlement {
+  const transfers: ScoreTransfer[] = [];
+  if (includeFlowerAwards) for (const seat of seats) addFlowerAwards(players[seat], transfers);
+  const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
+  for (const transfer of transfers) {
+    changes[transfer.from] -= transfer.amount;
+    changes[transfer.to] += transfer.amount;
+  }
+  return { transfers, changes };
+}
+
 /** North inherits the selected round's Mahjong payment, but the rulebook removes Flower/Season awards. */
 export function settleNorthEastRound(players: Record<Seat, ScorePlayer>, winner?: EastRoundWinner): EastRoundSettlement {
   const transfers: ScoreTransfer[] = [];
@@ -55,7 +70,14 @@ export function settleNorthSouthRound(players: Record<Seat, ScorePlayer>, winner
   addAward(transfers, winner.seat, winner.cardScore, "North South Card Mahjong");
   if (pot > 0) transfers.push({ from: winner.seat, to: winner.seat, amount: pot, reason: "North Round buy pot" });
   const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
-  for (const transfer of transfers) if (transfer.from !== transfer.to) { changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
+  for (const transfer of transfers) {
+    if (transfer.from === transfer.to) continue;
+    changes[transfer.from] -= transfer.amount;
+    changes[transfer.to] += transfer.amount;
+  }
+  // Buy payments were deducted at the moment of purchase. The winner now
+  // receives the accumulated pot, including any amount they bought into.
+  changes[winner.seat] += pot;
   return { transfers, changes };
 }
 
@@ -78,7 +100,14 @@ export function settleSouthRound(players: Record<Seat, ScorePlayer>, winner: { s
   for (const seat of seats) addFlowerAwards(players[seat], transfers);
   if (pot > 0) transfers.push({ from: winner.seat, to: winner.seat, amount: pot, reason: "South Round buy pot" });
   const changes = Object.fromEntries(seats.map((seat) => [seat, 0])) as Record<Seat, number>;
-  for (const transfer of transfers) { if (transfer.from !== transfer.to) changes[transfer.from] -= transfer.amount; changes[transfer.to] += transfer.amount; }
+  for (const transfer of transfers) {
+    if (transfer.from === transfer.to) continue;
+    changes[transfer.from] -= transfer.amount;
+    changes[transfer.to] += transfer.amount;
+  }
+  // Each buy already took 100 points from its buyer during play. Award the
+  // accumulated pot to the Mahjong winner when the hand ends.
+  changes[winner.seat] += pot;
   return { transfers, changes };
 }
 
