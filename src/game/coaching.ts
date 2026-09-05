@@ -1,4 +1,5 @@
 import { type EastRoundState } from "./state";
+import type { SouthCard } from "./south-cards";
 import { type Seat, type Tile, tileLabel as rawTileLabel } from "./tiles";
 
 export type CoachingOption = { tileId: string; title: string; reason: string; preserves: string; lookingFor: string; tableWatch?: string; alternative?: string };
@@ -18,6 +19,65 @@ const tileLabel = (tile: Tile): string => titleCase(rawTileLabel(tile));
 const suitLabel = (suit: string): string => titleCase(suit);
 
 const countGroups = (hand: readonly Tile[]): Tile[][] => Object.values(hand.reduce<Record<string, Tile[]>>((groups, tile) => ({ ...groups, [identity(tile)]: [...(groups[identity(tile)] ?? []), tile] }), {}));
+
+/** Whether a tile directly belongs to the active South Card target. This is a
+ * coaching classification, not a new game rule: it prevents required singleton
+ * Winds/Dragons from being described as weak merely because they have no pair. */
+function servesSouthCard(tile: Tile, goalText: string): boolean {
+  const goal = goalText.toLowerCase();
+  if (tile.kind === "wind") return goal.includes("wind");
+  if (tile.kind === "dragon") return goal.includes("dragon");
+  if (tile.kind !== "number") return false;
+  if (goal.includes("no honour")) return true;
+  if (goal.includes(tile.suit) || goal.includes(tileLabel(tile).toLowerCase())) return true;
+  if (goal.includes(`${tile.rank}s`) || goal.includes(` ${tile.rank} `)) return true;
+  return /pair|pung|kong|chow|run|crochet|knit|same suit|mixed|odd-numbered|numbered/.test(goal);
+}
+
+function southMeldCardCheck(kind: "pung" | "pureChow" | "crochet" | "knit" | "kong", goalText: string): string {
+  const goal = goalText.toLowerCase();
+  const supports = kind === "pureChow" ? /chow|run/.test(goal)
+    : kind === "pung" ? goal.includes("pung")
+      : kind === "kong" ? goal.includes("kong")
+        : kind === "crochet" ? goal.includes("crochet")
+          : goal.includes("knit");
+  return supports ? "This is one of the structures named by your South Card." : `This is visible on the table, but it does not count toward the specific structure ${goalText} asks you to make.`;
+}
+
+const meldTitle = (kind: "pung" | "pureChow" | "crochet" | "knit" | "kong"): string => ({ pung: "Pung", pureChow: "Pure Chow", crochet: "Crochet", knit: "Knit", kong: "Kong" })[kind];
+
+/** A visible, card-specific checklist. South cards—not the East hand shape—are
+ * the source of every item in this summary and every South recommendation. */
+function southCardChecklist(card: SouthCard, tiles: readonly Tile[]): string[] {
+  const goal = card.goal.toLowerCase();
+  const groups = countGroups(tiles);
+  const pairs = groups.filter((group) => group.length === 2).length;
+  const pungs = groups.filter((group) => group.length >= 3).length;
+  const kongs = groups.filter((group) => group.length >= 4).length;
+  const chows = completePureChows(tiles);
+  const winds = new Set(tiles.filter((tile): tile is Extract<Tile, { kind: "wind" }> => tile.kind === "wind").map((tile) => tile.wind));
+  const dragons = new Set(tiles.filter((tile): tile is Extract<Tile, { kind: "dragon" }> => tile.kind === "dragon").map((tile) => tile.dragon));
+  const numberedBySuit = (["bamboo", "character", "dot"] as const).map((suit) => ({ suit, count: tiles.filter((tile) => tile.kind === "number" && tile.suit === suit).length }));
+  const strongestSuit = [...numberedBySuit].sort((left, right) => right.count - left.count)[0];
+  const checklist: string[] = [];
+  if (/1 of each wind/.test(goal)) checklist.push(`Winds: ${winds.size}/4 different Winds collected${winds.size < 4 ? `; still need ${(["east", "south", "west", "north"] as const).filter((wind) => !winds.has(wind)).map(titleCase).join(", ")}` : "; all four are present"}.`);
+  if (/1 of each dragon/.test(goal)) checklist.push(`Dragons: ${dragons.size}/3 different Dragons collected${dragons.size < 3 ? `; still need ${(["red", "green", "white"] as const).filter((dragon) => !dragons.has(dragon)).map(titleCase).join(", ")}` : "; all three are present"}.`);
+  const pairMatch = goal.match(/(?:all )?(\d|seven) pairs?/);
+  if (pairMatch) {
+    const needed = pairMatch[1] === "seven" ? 7 : Number(pairMatch[1]);
+    checklist.push(`Pairs: ${pairs}/${needed} matching pairs currently visible.`);
+  }
+  const pungMatch = goal.match(/(\d) pungs?/);
+  if (pungMatch) checklist.push(`Pungs: ${pungs}/${Number(pungMatch[1])} matching triples currently visible.`);
+  const kongMatch = goal.match(/(\d) kongs?/);
+  if (kongMatch) checklist.push(`Kongs: ${kongs}/${Number(kongMatch[1])} four-of-a-kind groups currently visible.`);
+  if (goal.includes("chow") || goal.includes("run")) checklist.push(`Sequences: ${chows.length} complete Chow${chows.length === 1 ? "" : "s"} currently visible${chows.length ? ` (${chows.join(", ")})` : ""}.`);
+  if (goal.includes("same suit")) checklist.push(`Suit direction: ${titleCase(strongestSuit.suit)} currently has ${strongestSuit.count} numbered tiles, your strongest starting suit for this card.`);
+  if (goal.includes("no honour")) checklist.push(`Honours: ${tiles.filter((tile) => tile.kind === "wind" || tile.kind === "dragon").length} currently held; this card needs no Winds or Dragons.`);
+  if (goal.includes("crochet")) checklist.push("Crochets: look for the same number in Bamboo, Character, and Dot; each completed three-suit match is one Crochet.");
+  if (goal.includes("knit")) checklist.push("Knit: look for the same number in two suits, alongside the Crochet relationship named on your card.");
+  return checklist;
+}
 
 /**
  * The first Coach option is always the weakest current candidate. Extra options
@@ -97,7 +157,18 @@ const isInCompletePureChow = (tile: Tile, hand: readonly Tile[]): boolean => {
     if (first.suit !== tile.suit || second.suit !== tile.suit) return false;
     const ranks = [tile.rank, first.rank, second.rank].sort((left, right) => left - right);
     return ranks[1] === ranks[0] + 1 && ranks[2] === ranks[1] + 1;
-  }));
+}));
+};
+
+const completePureChows = (hand: readonly Tile[]): string[] => {
+  const complete: string[] = [];
+  for (const suit of ["bamboo", "character", "dot"] as const) {
+    const ranks = new Set(hand.filter((tile): tile is Extract<Tile, { kind: "number" }> => tile.kind === "number" && tile.suit === suit).map((tile) => tile.rank));
+    for (let rank = 1; rank <= 7; rank += 1) {
+      if (ranks.has(rank) && ranks.has(rank + 1) && ranks.has(rank + 2)) complete.push(`${rank}–${rank + 1}–${rank + 2} ${suitLabel(suit)}`);
+    }
+  }
+  return complete;
 };
 
 export function explainHand(state: EastRoundState, seat: Seat, firstTurn: boolean): string {
@@ -146,13 +217,18 @@ export function analyseHand(state: EastRoundState, seat: Seat): HandAnalysis {
   const groups = countGroups(hand);
   const pairs = groups.filter((group) => group.length === 2).map((group) => tileLabel(group[0]));
   const pungs = groups.filter((group) => group.length >= 3).map((group) => tileLabel(group[0]));
-  const chows: string[] = [];
+  const chows = completePureChows(hand);
   const developingChows: HandAnalysis["developingChows"] = [];
   for (const tile of hand) if (tile.kind === "number") for (const other of hand) if (other.kind === "number" && other.suit === tile.suit && other.rank === tile.rank + 1) {
+    const pairAlreadyCompletesChow = hand.some((third) => {
+      if (third.id === tile.id || third.id === other.id || third.kind !== "number" || third.suit !== tile.suit) return false;
+      const ranks = [tile.rank, other.rank, third.rank].sort((left, right) => left - right);
+      return ranks[1] === ranks[0] + 1 && ranks[2] === ranks[1] + 1;
+    });
+    if (pairAlreadyCompletesChow) continue;
     const label = `${tileLabel(tile)} + ${tileLabel(other)}`;
     if (!developingChows.some((item) => item.tiles === label)) developingChows.push({ tiles: label, needs: `${tile.rank > 1 ? tile.rank - 1 : ""}${tile.rank > 1 ? " or " : ""}${other.rank < 9 ? other.rank + 1 : ""} ${suitLabel(tile.suit)}`.trim() });
   }
-  for (const tile of hand) if (tile.kind === "number" && isInCompletePureChow(tile, hand) && !chows.includes(tile.suit)) chows.push(tile.suit);
   const weakTiles = hand.filter((tile) => !isInCompletePureChow(tile, hand) && chowConnections(tile, hand) === 0 && !groups.some((group) => group.length >= 2 && group.some((item) => item.id === tile.id))).map(tileLabel);
   return { pairs, pungs, chows, developingChows, weakTiles, summary: `You have ${pairs.length} pair${pairs.length === 1 ? "" : "s"}, ${pungs.length} Pung${pungs.length === 1 ? "" : "s"}, and ${developingChows.length} developing Pure Chow opportunity${developingChows.length === 1 ? "" : "ies"}.` };
 }
@@ -166,14 +242,41 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
   if (southFormat && state.south) {
     const card = state.south.cards[seat];
     const analysis = analyseHand(state, seat);
-    const pairs = analysis.pairs.map((item) => `Pair: ${item} ×2 — this may help only if your South Card calls for a Pair.`);
+    const allSouthTiles = [...hand, ...player.melds.flatMap((meld) => meld.tiles)];
+    const cardChecklist = southCardChecklist(card, allSouthTiles);
+    const requiresEveryWind = /1 of each wind/i.test(card.goal);
+    const heldWinds = new Set(hand.filter((tile): tile is Extract<Tile, { kind: "wind" }> => tile.kind === "wind").map((tile) => tile.wind));
+    const missingWinds = (["east", "south", "west", "north"] as const).filter((wind) => !heldWinds.has(wind));
+    const pairs = countGroups(hand)
+      .filter((group) => group.length === 2)
+      .map((group) => {
+        const tile = group[0];
+        if (tile.kind === "wind" && /additional wind/i.test(card.goal)) {
+          return `Extra Wind: ${tileLabel(tile)} ×2 — one copy fulfils the “one of each Wind” requirement and the second is the additional Wind your South Card asks for.`;
+        }
+        if (/pair/i.test(card.goal)) return `Pair: ${tileLabel(tile)} ×2 — two matching tiles, which directly contributes to the Pair named on your South Card.`;
+        return `Pair: ${tileLabel(tile)} ×2 — two matching tiles. The Coach compares it with the other structures your South Card requires when suggesting your next move.`;
+      });
     const pungs = analysis.pungs.map((item) => `Pung: ${item} ×3 — three matching tiles; useful when your South Card asks for Pungs.`);
-    const developing = analysis.developingChows.map((item) => `${item.tiles} — a possible sequence; keep it only if it helps the goal on your South Card.`);
-    const weak = analysis.weakTiles.slice(0, 3).map((item) => `${item} — it does not currently match a pair, Pung, or sequence in your visible hand. Check whether it serves your South Card before keeping it.`);
+    const cardUsesSequences = /chow|run/i.test(card.goal);
+    const completeChows = analysis.chows.map((chow) => cardUsesSequences
+      ? `Complete Chow: ${chow} — three consecutive tiles already complete a Chow, which ${card.title} uses.`
+      : `Complete Chow: ${chow} — this is a complete consecutive group, although ${card.title} is built toward different named structures.`);
+    const developing = analysis.developingChows.map((item) => cardUsesSequences
+      ? `${item.tiles} — these consecutive tiles can become a Chow if you draw ${item.needs}. ${card.title} includes a Chow or Run, so this is a useful path.`
+      : `${item.tiles} — these are consecutive tiles, but ${card.title} is not built from Chows or Runs. Your card instead asks for: ${card.goal}`);
+    const weak = hand
+      .filter((tile) => analysis.weakTiles.includes(tileLabel(tile)) && !servesSouthCard(tile, card.goal))
+      .slice(0, 3)
+      .map((tile) => `${tileLabel(tile)} — it does not currently help the specific target on your South Card, and it is not yet part of a pair, Pung, or sequence.`);
+    const requiredSingletons = requiresEveryWind
+      ? [`Wind requirement: you have ${heldWinds.size} of the 4 different Winds (${[...heldWinds].map(titleCase).join(", ") || "none"}). ${missingWinds.length ? `Still look for ${missingWinds.map(titleCase).join(", ")}.` : "You already have every required Wind—keep each one."}`]
+      : [];
+    const exposedSets = player.melds.map((meld) => `Exposed ${meldTitle(meld.kind)}: ${meld.tiles.map(tileLabel).join(" · ")} — ${southMeldCardCheck(meld.kind, card.goal)}`);
     const concealedPatternNote = /crochet|knit/i.test(card.goal)
       ? "Crochets and Knits stay concealed while you build them. They cannot be called as their own discard action; in South only a buy from the player on your left can add a non-completing discard to your hand."
       : "";
-    return { overview: `Your South Card is ${card.title}: ${card.goal} This is your personal Mahjong target for this round.`, progress: `You have ${hand.length} concealed tiles. Compare every group you build against ${card.title}, not against the East Round target.${state.round === "north" ? " Flowers and Seasons are concealed jokers here, but cannot form a Pair." : ""}`, built: [...pairs, ...pungs], developing, weak, scoring: [`Completing ${card.title} records ${card.score.toLocaleString()} points.${card.bonus ? ` ${card.bonus}` : ""}${state.round === "north" ? " North does not add Flower/Season awards." : ""}`, "Score focus: build toward your own card’s printed value; an attractive East-style group is only worth keeping if it helps that card."], focus: `${concealedPatternNote} Your immediate focus is ${card.goal} Keep tiles that directly help this requirement; a useful-looking East Round Chow is not automatically useful in South.` };
+    return { overview: `Your South Card is ${card.title}: ${card.goal} This is your personal Mahjong target for this round.`, progress: `Card check — ${cardChecklist.join(" ")} ${state.round === "north" ? "Flowers and Seasons are concealed jokers here, but cannot form a Pair." : ""}`, built: [...requiredSingletons, ...exposedSets, ...pairs, ...pungs, ...completeChows], developing, weak, scoring: [`Completing ${card.title} records ${card.score.toLocaleString()} points.${card.bonus ? ` ${card.bonus}` : ""}${state.round === "north" ? " North does not add Flower/Season awards." : ""}`, "Score focus: build toward your own card’s printed value; an attractive East-style group is only worth keeping if it helps that card."], focus: `${concealedPatternNote} Your immediate focus is ${card.goal} Keep tiles that directly help this requirement; a useful-looking East Round Chow is not automatically useful in South.` };
   }
   if (westFormat) {
     const groups = countGroups(hand);
@@ -243,19 +346,15 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
 
 function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption[] {
   const hand = state.players[seat].hand;
+  const melds = state.players[seat].melds;
   const card = state.south!.cards[seat];
   const goal = card.goal.toLowerCase();
+  const cardChecklist = southCardChecklist(card, [...hand, ...melds.flatMap((meld) => meld.tiles)]);
   const copyCount = (tile: Tile) => hand.filter((other) => identity(other) === identity(tile)).length;
   const suitedNeighbours = (tile: Tile) => tile.kind === "number"
     ? hand.filter((other) => other.id !== tile.id && other.kind === "number" && other.suit === tile.suit && Math.abs(other.rank - tile.rank) <= 2).length
     : 0;
-  const namedOnCard = (tile: Tile) => {
-    const label = tileLabel(tile).toLowerCase();
-    if (tile.kind === "number") return goal.includes(tile.suit) || goal.includes(`${tile.rank}s`) || goal.includes(` ${tile.rank} `) || goal.includes(label);
-    if (tile.kind === "wind") return goal.includes("wind") || goal.includes(tile.wind);
-    if (tile.kind === "dragon") return goal.includes("dragon") || goal.includes(tile.dragon);
-    return false;
-  };
+  const namedOnCard = (tile: Tile) => servesSouthCard(tile, card.goal);
   const usefulValue = (tile: Tile) => {
     let value = copyCount(tile) * 26;
     if (state.round === "north" && state.north?.format === "south" && (tile.kind === "flower" || tile.kind === "season")) value += 120;
@@ -292,8 +391,8 @@ function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption
       tileId: tile.id,
       title: state.phase === "charleston" ? `Pass ${tileLabel(tile)}` : `Discard ${tileLabel(tile)}`,
       reason: why,
-      preserves: `Keep ${keep}. Those tiles currently have the clearest connection to ${card.title}, the ${card.score.toLocaleString()}-point scoring target for this hand.`,
-      lookingFor: `Your card asks for: ${card.goal}`,
+      preserves: `Keep ${keep}. They support ${card.title}: ${cardChecklist[0] ?? card.goal}`,
+      lookingFor: `Next card target: ${cardChecklist.slice(1, 3).join(" ") || card.goal}`,
       tableWatch: visibleTableWatch(state, seat, potentialDrawKeys(hand.filter((item) => item.id !== tile.id))),
       alternative: index === 0 && candidates[1] ? `${tileLabel(candidates[1])} and ${tileLabel(candidates[2] ?? candidates[1])} are the other two tiles I would pass in this Charleston step.` : undefined,
     };
