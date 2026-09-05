@@ -26,9 +26,10 @@ function activityAfterFlowerWall(before: EastRoundState, after: EastRoundState, 
   const bonus = newEvents.find((event) => event.type === "replacedBonus" && event.seat === replacement.seat);
   const kong = newEvents.find((event) => (event.type === "declaredKong" || event.type === "claimedKong") && event.seat === replacement.seat);
   const actor = name(replacement.seat, humanSeatOf(after));
+  const isHuman = replacement.seat === humanSeatOf(after);
   if (bonus?.type === "replacedBonus") {
     const bonusTile = allTilesById.get(bonus.tileId);
-    return `${actor} drew ${bonusTile ? tileLabel(bonusTile) : "a Flower or Season"}, placed it face up in the bonus area, and took a replacement from the Flower Wall. It now has ${after.flowerWall.length} left.`;
+    return `${actor} drew ${bonusTile ? tileLabel(bonusTile) : "a Flower or Season"}. It is a bonus tile, not part of ${isHuman ? "your" : `${actor}'s`} normal hand, so it is placed face up beside ${isHuman ? "your" : `${actor}'s`} tiles. A replacement then comes from the Flower Wall (${after.flowerWall.length} left).`;
   }
   if (kong) return `${actor} declared a Kong, so they took the required replacement from the Flower Wall. It now has ${after.flowerWall.length} left.`;
   return `${actor} took a replacement from the Flower Wall. It now has ${after.flowerWall.length} left.`;
@@ -546,7 +547,7 @@ export default function HomePage() {
     const tile = allTilesById.get(openingBonusIds[openingBonusShown]);
     const timer = window.setTimeout(() => {
       setOpeningBonusShown((shown) => shown + 1);
-      if (tile) setActivity(`${tileLabel(tile)} appeared in your opening deal. It is placed face up beside your hand and replaced from the Flower Wall, so your normal hand stays at 14 tiles.`);
+      if (tile) setActivity(`${tileLabel(tile)} appeared in your opening deal. It is a bonus tile, not part of your 14-tile hand, so it moves face up beside your tiles. The Flower Wall gives you a replacement.`);
     }, openingBonusShown === 0 ? 350 : 1250);
     return () => window.clearTimeout(timer);
   }, [game, openingBonusIds, openingBonusShown, setupStep, tutorialLength]);
