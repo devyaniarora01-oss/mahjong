@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { chooseNorthFormat, createNorthRound } from "./north";
 import { isWestNorthMahjongHand, matchesSouthNorthCard } from "./north-goals";
-import { canReplaceNorthExposedJoker, replaceNorthExposedJoker } from "./state";
+import { canClaimExposedKong, canReplaceNorthExposedJoker, claimExposedKong, replaceNorthExposedJoker } from "./state";
 import { SOUTH_CARDS } from "./south-cards";
 import { createTileSet } from "./tiles";
 
@@ -74,5 +74,22 @@ describe("North joker validation", () => {
     const replaced = replaceNorthExposedJoker(state, "south");
     expect(replaced.players.south.melds[0].tiles.map((item) => item.id)).toContain("bamboo-6-4");
     expect(replaced.players.south.hand.map((item) => item.id)).toContain("bamboo-1-1");
+  });
+
+  it("uses selected-rank West jokers explicitly when they complete a Kong", () => {
+    const base = createNorthRound(deck, 8, scores, "west", physical, "west", 5);
+    const state = {
+      ...base,
+      phase: "claim" as const,
+      lastDiscard: { by: "east" as const, tile: tile("bamboo-1-1") },
+      players: {
+        ...base.players,
+        south: { ...base.players.south, hand: [tile("bamboo-1-2"), tile("bamboo-5-1"), tile("bamboo-5-2")] },
+      },
+    };
+
+    expect(canClaimExposedKong(state, "south")).toBe(true);
+    const after = claimExposedKong(state, "south");
+    expect(after.players.south.melds.at(-1)?.tiles.map((item) => item.id)).toEqual(["bamboo-1-2", "bamboo-5-1", "bamboo-5-2", "bamboo-1-1"]);
   });
 });

@@ -15,7 +15,7 @@ import {
   passClaims,
   type EastRoundState,
 } from "./state";
-import { SEATS, type Seat } from "./tiles";
+import { SEATS, type Seat, type Tile } from "./tiles";
 
 export type BotAction =
   | { type: "draw"; seat: Seat }
@@ -33,15 +33,58 @@ const seatsAfter = (seat: Seat): Seat[] =>
 const sortedTileIds = (state: EastRoundState, seat: Seat): string[] =>
   state.players[seat].hand.map((tile) => tile.id).sort();
 
+const isWestFormat = (state: EastRoundState) => state.round === "west" || (state.round === "north" && state.north?.format === "west");
+
+/** Pick the numbered suit the bot already has most reason to keep. */
+const westPreferredSuit = (hand: readonly Tile[]) => (["bamboo", "character", "dot"] as const)
+  .map((suit) => {
+    const tiles = hand.filter((tile): tile is Extract<Tile, { kind: "number" }> => tile.kind === "number" && tile.suit === suit);
+    const repeats = tiles.reduce((total, tile) => total + Math.max(0, tiles.filter((other) => other.rank === tile.rank).length - 1), 0);
+    return { suit, count: tiles.length, repeats };
+  })
+  .sort((left, right) => right.count - left.count || right.repeats - left.repeats)[0].suit;
+
+/** West bots discard/pass other numbered suits before breaking their chosen suit or Honour tiles. */
+const westSheddingOrder = (hand: readonly Tile[]): Tile[] => {
+  const preferredSuit = westPreferredSuit(hand);
+  return [...hand].sort((left, right) => {
+    const leftExtraSuit = left.kind === "number" && left.suit !== preferredSuit ? 0 : 1;
+    const rightExtraSuit = right.kind === "number" && right.suit !== preferredSuit ? 0 : 1;
+    if (leftExtraSuit !== rightExtraSuit) return leftExtraSuit - rightExtraSuit;
+    const leftCopies = hand.filter((tile) => identity(tile) === identity(left)).length;
+    const rightCopies = hand.filter((tile) => identity(tile) === identity(right)).length;
+    return leftCopies - rightCopies || left.id.localeCompare(right.id);
+  });
+};
+
+const identity = (tile: Tile) => tile.kind === "number" ? `${tile.kind}-${tile.suit}-${tile.rank}` : tile.kind === "wind" ? `${tile.kind}-${tile.wind}` : tile.kind === "dragon" ? `${tile.kind}-${tile.dragon}` : `${tile.kind}-${tile.rank}`;
+
+export function chooseBotCharlestonTileIds(state: EastRoundState, seat: Seat): string[] {
+  const hand = state.players[seat].hand;
+  return (isWestFormat(state) ? westSheddingOrder(hand) : [...hand].sort((left, right) => left.id.localeCompare(right.id))).slice(0, 3).map((tile) => tile.id);
+}
+
+const westBotShouldCall = (state: EastRoundState, seat: Seat): boolean => {
+  const discard = state.lastDiscard?.tile;
+  if (!discard || !isWestFormat(state) || discard.kind !== "number") return true;
+  return discard.suit === westPreferredSuit([...state.players[seat].hand, discard]);
+};
+
+const westBotKeepsTile = (state: EastRoundState, seat: Seat, tileId: string): boolean => {
+  if (!isWestFormat(state)) return true;
+  const tile = state.players[seat].hand.find((item) => item.id === tileId);
+  return !tile || tile.kind !== "number" || tile.suit === westPreferredSuit(state.players[seat].hand);
+};
+
 /** A deliberately simple, deterministic policy; it does not evaluate hand strength. */
 export function chooseBotTurnAction(state: EastRoundState, seat: Seat): BotAction | undefined {
   if (state.status !== "active" || state.turn !== seat) return undefined;
   if (state.phase === "draw") return { type: "draw", seat };
   if (state.phase !== "discard") return undefined;
   if (canDeclareMahjong(state, seat)) return { type: "mahjong", seat };
-  const kongTile = sortedTileIds(state, seat).find((tileId) => canDeclareConcealedKong(state, seat, tileId));
+  const kongTile = sortedTileIds(state, seat).find((tileId) => canDeclareConcealedKong(state, seat, tileId) && westBotKeepsTile(state, seat, tileId));
   if (kongTile) return { type: "kong", seat, tileId: kongTile };
-  const tileId = sortedTileIds(state, seat)[0];
+  const tileId = (isWestFormat(state) ? westSheddingOrder(state.players[seat].hand).map((tile) => tile.id) : sortedTileIds(state, seat))[0];
   return tileId ? { type: "discard", seat, tileId } : undefined;
 }
 
@@ -56,8 +99,8 @@ export function chooseBotClaimAction(state: EastRoundState, humanSeat: Seat): Bo
   if (winner) return winner === humanSeat ? undefined : { type: "mahjong", seat: winner };
 
   for (const seat of seatsAfter(state.lastDiscard.by)) {
-    if (seat !== humanSeat && canClaimExposedKong(state, seat)) return { type: "exposedKong", seat };
-    if (seat !== humanSeat && canClaimPung(state, seat)) return { type: "pung", seat };
+    if (seat !== humanSeat && canClaimExposedKong(state, seat) && westBotShouldCall(state, seat)) return { type: "exposedKong", seat };
+    if (seat !== humanSeat && canClaimPung(state, seat) && westBotShouldCall(state, seat)) return { type: "pung", seat };
   }
 
   const chowSeat = seatsAfter(state.lastDiscard.by)[0];
