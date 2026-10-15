@@ -214,3 +214,5 @@ button{font:inherit;cursor:pointer}
 #chalkp p,#chalkp .cline{font:500 15px/1.5 var(--display);margin:0 0 10px}
 #chalkp .cline>b{font:500 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:rgba(243,234,210,.72);margin-right:2px}
 #chalkp .tabs button{font:500 11px var(--mono)}
+#chalkp p,#chalkp .cline{font-weight:400}
+#chalkp .cline>b{font:400 24px/1 var(--hand);letter-spacing:0;text-transform:none;color:var(--chalk);margin-right:4px}
