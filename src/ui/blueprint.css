@@ -6,7 +6,7 @@
   --red:#c4321f; --blue:#1d4f91; --green:#1f7a47;
   --display:'Bricolage Grotesque',system-ui,sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-  --hand:'Reenie Beanie','Bradley Hand',cursive;
+  --hand:'Walter Turncoat','Chalkboard SE','Chalkduster','Bradley Hand',cursive;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -238,3 +238,11 @@ button{font:inherit;cursor:pointer}
 .screen .cta .rounds b.now{color:var(--chalk);background:none;padding:0}
 .screen .panel{background:rgba(5,20,14,.38);border:1px solid rgba(243,234,210,.22);box-shadow:none;backdrop-filter:none}
 .screen .panel .scores>div{background:rgba(5,20,14,.3)}
+
+/* chalk, but legible: sturdier face, slightly smaller sizes, soft dust glow */
+#com{font-size:21px;line-height:1.2;letter-spacing:.01em}
+#chalkp h3{font-size:27px;line-height:1.1}
+#chalkp .cline>b{font-size:19px;line-height:1.2;letter-spacing:.01em}
+.tnote{font-size:24px}
+.panel .goal{font-size:24px;line-height:1.25}
+#com,#chalkp h3,#chalkp .cline>b,.tnote,.panel .goal,.lede{text-shadow:0 0 1px rgba(255,255,255,.35),0 0 8px rgba(255,216,74,.18)}

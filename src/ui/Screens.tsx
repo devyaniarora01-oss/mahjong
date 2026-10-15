@@ -91,7 +91,7 @@ export function FinalResults({ standings, winner, onNew }: { standings: { name: 
     <div className="screen" data-screen="final">
       <div className="eb m"><i /><span>Four rounds complete</span></div>
       <h1 style={{ fontSize: 96 }}>Final <em>results.</em></h1>
-      <p className="lede" style={{ color: "var(--chalk)", fontFamily: "var(--hand)", fontSize: 30, lineHeight: 1 }}>{winner}</p>
+      <p className="lede" style={{ color: "var(--chalk)", fontFamily: "var(--hand)", fontSize: 24, lineHeight: 1.2 }}>{winner}</p>
       <div className="panel" style={{ maxWidth: 560, padding: "10px 20px 20px" }}>
         <div className="standings">{standings.map((s, i) => <div key={s.name}><b>#{i + 1}</b><span>{s.name}</span><small>{s.score.toLocaleString()}</small></div>)}</div>
       </div>
