@@ -14,7 +14,7 @@ import { createTileSet, tileLabel as rawTileLabel, type Seat, type Tile } from "
 import { Stage } from "../ui/Stage";
 import { TableBoard } from "../ui/Table";
 import { BpTile } from "../ui/Tile";
-import { DiscardArrow } from "../ui/Chalk";
+
 import { groupHand, suitWord } from "../ui/groups";
 import { EastVisual, SouthCardKey, SouthVisual, TOUR_META, TourOverlay, northTutorialFor, southTutorial, tutorial, westTutorial, type RoundKey } from "../ui/Lessons";
 import { FinalResults, Modal, RoundSetup, Welcome } from "../ui/Screens";
@@ -618,7 +618,6 @@ export default function HomePage() {
       {tourScores && <div className="ab sn m" style={{ left: 52, top: 668, zIndex: 65, background: "var(--ink)", padding: "3px 8px" }}><b>{cap(humanSeat)}</b> · <span className="sc">{player.score.toLocaleString()}</span></div>}
 
       {isPlaying && <div className="ab" id="act" data-tour="act">{act}</div>}
-      {isPlaying && !coachOpen && game.status === "active" && game.lastDiscard && <DiscardArrow watch={`${game.lastDiscard.tile.id}-${commentary}`} />}
       {isPlaying && error && <div className="err">{error}</div>}
 
       {coachOpen && isPlaying && (
