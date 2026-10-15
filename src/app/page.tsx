@@ -627,21 +627,26 @@ export default function HomePage() {
                 const label = o.title.replace(/^(Discard|Pass)\s+/i, "").replace(/[.:].*$/, "");
                 return <>
                   <p className="cline"><b>Why · </b><CoachText text={sents(honourFix(o.reason, label, copies), 2)} /></p>
-                  {o.preserves && <p className="cline"><b>Keep · </b><CoachText text={sents(o.preserves, 1)} /></p>}
+                  {o.preserves && <p className="cline"><b>Keep · </b><CoachText text={sents(o.preserves.replace(/^Keep /, ""), 1)} /></p>}
                   {o.lookingFor && <p className="cline"><b>Look for · </b><CoachText text={sents(o.lookingFor, 1)} /></p>}
                 </>;
               })()}
             </> : <>
               <h3>Your hand</h3>
-              <p className="cline"><b>{setCount} of 4 sets built · {hasPair ? "Pair ✓" : "No pair yet"}</b></p>
+              {(eastLike || westLike) && <p className="cline"><b>{setCount} of 4 sets built · {hasPair ? "Pair ✓" : "No pair yet"}</b></p>}
               {(() => {
                 const oneHonour = (w: string) => /(Wind|Dragon)/.test(w) ? w.replace(/ — .*$/, "") + " — only 1 copy. It can only become a Pung, which needs two more." : w;
-                const trim = (i: string) => i.replace(/ — a developing Pure Chow; draw (.*?) to complete it\.?$/, " → needs $1").replace(/ — (two|three|four) (identical|consecutive)[^.]*\.?$/, "").replace(/ — it is not currently in a pair.*$/, " — not part of a set yet");
+                const trim = (i: string) => i
+                  .replace(/ — a developing Pure Chow; draw (.*?) to complete it\.?$/, " → needs $1")
+                  .replace(/ — these consecutive tiles can become a Chow if you draw (.*?)\. .*$/, " → needs $1")
+                  .replace(/ — one more matching tile makes a Pung.*$/, " → 1 more makes a Pung")
+                  .replace(/ — it is not currently in a pair.*$/, " — not part of a set yet")
+                  .replace(/( — (?!only 1 copy|not part).*)$/, "");
                 const row = (label: string, items: string[], n: number) => items.length > 0 && <p className="cline"><b>{label} · </b><CoachText text={items.slice(0, n).map(trim).join(" · ")} /></p>;
                 return <>
                   {row("Built", summary.built, 3)}
                   {row("Developing", summary.developing, 2)}
-                  {row("Weak", summary.weak.map(oneHonour), 2)}
+                  {row("Weak", summary.weak.map((w) => (eastLike || westLike ? oneHonour(w) : w)), 2)}
                   <p className="cline"><b>Focus · </b><CoachText text={summary.focus} /></p>
                 </>;
               })()}
