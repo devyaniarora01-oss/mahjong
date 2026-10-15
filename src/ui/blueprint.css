@@ -205,7 +205,7 @@ button{font:inherit;cursor:pointer}
 .jumpfix .lnk.on{color:var(--yellow,#f6d84a)}
 #tc ul.ptr{margin:8px 0 0;padding-left:18px;font:400 12.5px/1.6 var(--mono);color:rgba(243,234,210,.88)}
 #tc ul.ptr li::marker{color:var(--yellow,#f6d84a)}
-#tc b{color:var(--cream);font-weight:700}
+#tc p b:not(.t),#tc li b:not(.t){color:var(--cream);font-weight:700}
 
 .hc>.t{display:flex}
 .pips{line-height:12px;height:12px;margin-top:8px}

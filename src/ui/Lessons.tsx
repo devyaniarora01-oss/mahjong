@@ -6,7 +6,7 @@ import type { SouthCard } from "../game/south-cards";
 import { Keys } from "./Tile";
 
 export const tutorial = [
-  ["This is the East Round", "This game begins with the East Round. You are East at the bottom; South is on your right, West faces you, and North is on your left. East takes the first turn, begins with one extra tile, and therefore discards first."],
+  ["This is the East Round", "This game begins with the East Round. East takes the first turn, begins with one extra tile, and therefore discards first."],
   ["The 144 tiles", "The full set has 108 numbered tiles, 16 Winds, 12 Dragons, and 8 bonus tiles. Bamboo, Characters, Dots, Winds, and Dragons build your hand. Flowers and Seasons go to the bonus area and are replaced from the Flower Wall."],
   ["Building the table and Flower Wall", "The 144 tiles are shuffled. East rolls and doubles the result to create the Flower Wall. Everyone receives 13 tiles; East receives one extra and starts with 14. Flowers, Seasons, and Kongs take replacement tiles from the Flower Wall. Everything else becomes the Draw Wall."],
   ["Your objective", "A winning East Round hand has four three-tile groups and one two-tile pair. You will slowly improve incomplete groups while keeping a useful pair."],
@@ -79,7 +79,7 @@ function Cell({ title, children, note }: { title: string; children: ReactNode; n
 }
 
 export function EastVisual({ step }: { step: number }) {
-  if (step === 1) {
+  if (step === 0) {
     return (
       <div className="lesson g4 vis">
         <Cell title="Numbered suits"><Keys keys={keys("b1", "c1", "d1")} /></Cell>
@@ -89,7 +89,7 @@ export function EastVisual({ step }: { step: number }) {
       </div>
     );
   }
-  if (step === 4) {
+  if (step === 3) {
     const items: [string, string[], string][] = [
       ["Pung", ["b6", "b6", "b6"], "Three identical tiles."],
       ["Pure Chow", ["d4", "d5", "d6"], "Three in a row, one suit."],

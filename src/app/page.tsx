@@ -244,7 +244,7 @@ export default function HomePage() {
       setDecisionNotes([]);
       setRound("east");
       setSouthCard(next.south!.cards[humanSeatOf(next)]);
-      setSouthCardOpen(false);
+      setSouthCardOpen(true);
       setSetupStep(0);
       setSelected(undefined);
       setCharlestonSelection([]);
@@ -488,7 +488,7 @@ export default function HomePage() {
   const claimActionRows = Math.max(1, Math.ceil(claimActionCount / 2));
   if (!game) return <Stage><Welcome onBegin={begin} error={error} /></Stage>;
   const scoresOf = (g: EastRoundState) => Object.fromEntries(seats.map((seat) => [seat, g.players[seat].score])) as Record<Seat, number>;
-  if (round === "south-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="south" scores={scoresOf(game)} you={humanSeatOf(game)} intro="Scores carry forward and East moves counterclockwise, so you move from East to North. Your winning objective now comes from a private South Card." kicker="Your secret South Card" heading={southCard?.title ?? "South Card"} body="First, Charleston: three exchanges of three concealed tiles. Then build only the goal on your card. Learn Mahjong stays available during play." southCard={southCard} cta="Start" onStart={startSouthRound} error={error} /></Stage>;
+  if (round === "south-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="south" scores={scoresOf(game)} you={humanSeatOf(game)} intro="Scores carry forward and East moves counterclockwise, so you move from East to North. Your winning objective now comes from a private South Card." kicker="Your secret South Card" heading="Revealed when you start" body="First, Charleston: three exchanges of three concealed tiles. Then build only the goal on your card." cta="Start" onStart={startSouthRound} error={error} /></Stage>;
   if (round === "west-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="west" scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise again. You are now West. Scores and players carry forward from South." kicker="West Round objective" heading="Pungs, Kongs, and one Pair" body="Build four groups made only from Pungs and Kongs, plus one Pair. At least one group must be a Kong. Pure Chows do not count in West." cta="Start" onStart={startWestRound} /></Stage>;
   if (round === "north-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="north" scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise one final time. You are now South, while your place at the table stays the same. Scores carry forward from West." kicker="North's format choice" heading="North will decide this hand" body="North can choose East-as-North, South-as-North, or West-as-North under the rulebook. Start the round to reveal North's selection and the rules it creates for this hand." cta="Start" onStart={startNorthRound} /></Stage>;
   if (round === "match-summary") {
@@ -663,7 +663,7 @@ export default function HomePage() {
         </>
       )}
 
-      {!isPlaying && (
+      {!isPlaying && !southCardOpen && (
         <TourOverlay
           title={activeTutorial[setupStep][0]}
           body={activeTutorial[setupStep][1]}
@@ -686,6 +686,7 @@ export default function HomePage() {
           <div className="m" style={{ marginTop: 8, color: "rgba(243,234,210,.7)" }}>{southCard.score.toLocaleString()} points{southCard.bonus ? ` · Bonus: ${southCard.bonus}` : ""}</div>
           <p>The tiles below show the building blocks named on this card. {game.round === "north" ? "Flowers and Seasons are concealed jokers here, but cannot form a Pair. " : ""}Keep this card open whenever you want to compare your hand to its goal.</p>
           <SouthCardKey card={southCard} />
+          <div className="actions"><button type="button" className="btn pri" onClick={() => setSouthCardOpen(false)}>Continue</button></div>
         </Modal>
       )}
 
