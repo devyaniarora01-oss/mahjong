@@ -25,13 +25,13 @@ export function Welcome({ onBegin, error }: { onBegin: () => void; error?: strin
   ];
   return (
     <div className="screen" data-screen="welcome">
+      <Rounds now={0} />
       <h1>Mahjong<br /><em>Coach</em></h1>
       <div className="stats">
         {[["108", "Numbered tiles"], ["16", "Winds"], ["12", "Dragons"], ["4", "Flowers"], ["4", "Seasons"]].map(([n, l]) => <div className="stat" key={l}><b>{n}</b><span>{l}</span></div>)}
       </div>
       <div className="cta">
         <button type="button" className="btn pri" onClick={onBegin}>Begin</button>
-        <Rounds now={0} />
       </div>
       {error && <p role="alert" className="err" style={{ position: "static", textAlign: "left", marginTop: 14 }}>{error}</p>}
       <div className="deco" aria-hidden="true">
@@ -66,6 +66,7 @@ export function RoundSetup(props: {
   const { round, scores, you, intro, kicker, heading, body, southCard, cta, onStart, error } = props;
   return (
     <div className="screen" data-screen={`${round}-setup`}>
+      <Rounds now={round === "south" ? 1 : round === "west" ? 2 : 3} />
       <h1 style={{ fontSize: 96 }}>{cap(round)} <em>Round</em></h1>
       <div className="panel">
         <p style={{ marginTop: 0 }}>{intro}</p>
@@ -79,7 +80,6 @@ export function RoundSetup(props: {
       </div>
       <div className="cta" style={{ marginTop: 26 }}>
         <button type="button" className="btn pri" onClick={onStart}>{cta}</button>
-        <Rounds now={round === "south" ? 1 : round === "west" ? 2 : 3} />
       </div>
       {error && <p role="alert" className="err" style={{ position: "static", textAlign: "left", marginTop: 14 }}>{error}</p>}
     </div>

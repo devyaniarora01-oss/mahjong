@@ -150,9 +150,10 @@ type Rect = { x: number; y: number; w: number; h: number };
 
 function rectsFor(names: string[]): Rect[] {
   const stage = document.getElementById("stage");
-  if (!stage) return [];
+  const board = document.getElementById("board");
+  if (!stage || !board) return [];
   const s = Number(stage.dataset.scale || 1);
-  const sr = stage.getBoundingClientRect();
+  const sr = board.getBoundingClientRect();
   const out: Rect[] = [];
   for (const name of names) {
     document.querySelectorAll(`[data-tour~="${name}"]`).forEach((el) => {
@@ -189,23 +190,23 @@ export function TourOverlay(props: {
   const last = index === total - 1;
   return (
     <>
-      <svg id="dim" className="ab" viewBox="0 0 1360 850" aria-hidden="true">
+      <svg id="dim" className="ab" viewBox="-2000 0 5360 850" aria-hidden="true">
         <defs>
           <mask id="dimmask">
-            <rect width="1360" height="850" fill="white" />
+            <rect x="-2000" width="5360" height="850" fill="white" />
             {rects.map((r, i) => <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx="10" fill="black" />)}
           </mask>
         </defs>
-        <rect width="1360" height="850" fill="#050e0a" opacity={targets.length ? 0.74 : 0.62} mask="url(#dimmask)" />
+        <rect x="-2000" width="5360" height="850" fill="#050e0a" opacity={targets.length ? 0.74 : 0.62} mask="url(#dimmask)" />
         {rects.map((r, i) => <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx="10" fill="none" stroke="#ffd84a" strokeWidth="2" strokeDasharray="7 7" />)}
       </svg>
       {meta.compass && <>
         <div className="tnote" style={{ left: 560, top: 118 }}>West faces you</div>
-        <div className="tnote" style={{ left: 142, top: 372 }}>North is on your left</div>
-        <div className="tnote" style={{ left: 940, top: 560 }}>South is on your right</div>
+        <div className="tnote pinL" style={{ left: 142, top: 372 }}>North is on your left</div>
+        <div className="tnote pinR" style={{ left: 940, top: 560 }}>South is on your right</div>
         <div className="tnote" style={{ left: 520, top: 616 }}>You are East, at the bottom</div>
       </>}
-      <div id="tc" role="dialog" aria-label={title} style={{ left: card.x, top: card.y, width: card.w ?? 340 }}>
+      <div id="tc" className={card.x > 680 ? "pinR" : ""} role="dialog" aria-label={title} style={{ left: card.x, top: card.y, width: card.w ?? 340 }}>
         <div className="eyr"><div className="dots">{Array.from({ length: total }, (_, i) => <i key={i} className={i === index ? "on" : ""} />)}</div></div>
         <h2>{title}</h2>
         <Body text={body} />

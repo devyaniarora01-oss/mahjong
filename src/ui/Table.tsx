@@ -124,7 +124,7 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
     const units = p.hand.length + p.melds.reduce((n, m) => n + m.tiles.length, 0) + p.bonusTiles.length;
     const ow = units > 17 ? 21 : units > 15 ? 23 : 26;
     return (
-      <div className="ab bl" style={frame(SEAT_FRAME[pos])}>
+      <div className={`ab bl ${pos === "north" ? "pinL" : pos === "south" ? "pinR" : ""}`} style={frame(SEAT_FRAME[pos])}>
         <div className="seat" data-seat={pos}>
           {p.hand.map((t) => <span key={t.id} style={{ marginRight: 1, display: "block" }}><BpBack w={ow} /></span>)}
           {p.melds.map((m, i) => <Meldrow key={i} meld={m} w={ow} />)}
@@ -169,8 +169,8 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
     <>
       <div className="ab bl" id="box" data-tour="box" />
       {label("west", { left: 0, right: 0, top: 106, textAlign: "center" })}
-      {label("north", { left: 120, top: 375, transform: "translate(-50%,-50%) rotate(-90deg)" })}
-      {label("south", { left: 1240, top: 375, transform: "translate(-50%,-50%) rotate(90deg)" })}
+      {label("north", { left: 120, top: 375, transform: "translate(-50%,-50%) rotate(-90deg)" }, "pinL")}
+      {label("south", { left: 1240, top: 375, transform: "translate(-50%,-50%) rotate(90deg)" }, "pinR")}
       {opponent("west")}{opponent("north")}{opponent("south")}
       {pond("west")}{pond("north")}{pond("south")}{pond("east")}
 

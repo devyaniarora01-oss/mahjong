@@ -13,11 +13,16 @@ export function Stage({ children, className = "" }: { children: ReactNode; class
       const el = ref.current;
       if (!el) return;
       const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
-      el.style.transform = `translate(${(window.innerWidth - STAGE_W * s) / 2}px,${(window.innerHeight - STAGE_H * s) / 2}px) scale(${s})`;
-      el.dataset.scale = String(s);
-      // let the felt and its grid continue past the stage so there are no black side bars
-      const ox = (window.innerWidth - STAGE_W * s) / 2;
+      // On wide windows the stage grows sideways: the 1360px board stays centred and the side panels pin to the edges.
+      const w = Math.max(STAGE_W, window.innerWidth / s);
+      const dx = (w - STAGE_W) / 2;
+      const ox = (window.innerWidth - w * s) / 2;
       const oy = (window.innerHeight - STAGE_H * s) / 2;
+      el.style.width = `${w}px`;
+      el.style.setProperty("--dx", `${dx}px`);
+      el.style.transform = `translate(${ox}px,${oy}px) scale(${s})`;
+      el.dataset.scale = String(s);
+      // let the felt and its grid continue past the stage so there are no black bars
       document.body.style.backgroundPosition = `${ox}px ${oy}px`;
       document.body.style.backgroundSize = `${46 * s}px ${46 * s}px`;
     };
@@ -27,7 +32,7 @@ export function Stage({ children, className = "" }: { children: ReactNode; class
   }, []);
   return (
     <div id="vp">
-      <div id="stage" ref={ref} className={className}>{children}</div>
+      <div id="stage" ref={ref} className={className}><div id="board">{children}</div></div>
     </div>
   );
 }
