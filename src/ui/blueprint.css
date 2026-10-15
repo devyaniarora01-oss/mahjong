@@ -65,7 +65,7 @@ button{font:inherit;cursor:pointer}
 .err{position:absolute;left:160px;width:1040px;top:596px;text-align:center;font:500 11px var(--mono);color:#ffb4a8;z-index:9}
 
 /* ---------- table ---------- */
-#box{left:420px;top:150px;width:520px;height:452px;border:1px solid rgba(243,234,210,.2)}
+#box{left:420px;top:150px;width:520px;height:452px}
 .sn{white-space:nowrap;color:rgba(243,234,210,.78);z-index:4}
 .sn b{font-weight:500;color:var(--cream)}
 .sn.turn b,.sn.turn{color:var(--chalk)}
@@ -206,3 +206,11 @@ button{font:inherit;cursor:pointer}
 #tc ul.ptr{margin:8px 0 0;padding-left:18px;font:400 12.5px/1.6 var(--mono);color:rgba(243,234,210,.88)}
 #tc ul.ptr li::marker{color:var(--yellow,#f6d84a)}
 #tc b{color:var(--cream);font-weight:700}
+
+.hc>.t{display:flex}
+.pips{line-height:12px;height:12px;margin-top:8px}
+#chalkp{font:500 15px/1.5 var(--display);color:var(--chalk)}
+#chalkp h3{font:400 34px/1 var(--hand)}
+#chalkp p,#chalkp .cline{font:500 15px/1.5 var(--display);margin:0 0 10px}
+#chalkp .cline>b{font:500 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:rgba(243,234,210,.72);margin-right:2px}
+#chalkp .tabs button{font:500 11px var(--mono)}
