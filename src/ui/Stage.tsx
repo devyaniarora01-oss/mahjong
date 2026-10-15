@@ -15,10 +15,15 @@ export function Stage({ children, className = "" }: { children: ReactNode; class
       const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
       el.style.transform = `translate(${(window.innerWidth - STAGE_W * s) / 2}px,${(window.innerHeight - STAGE_H * s) / 2}px) scale(${s})`;
       el.dataset.scale = String(s);
+      // let the felt and its grid continue past the stage so there are no black side bars
+      const ox = (window.innerWidth - STAGE_W * s) / 2;
+      const oy = (window.innerHeight - STAGE_H * s) / 2;
+      document.body.style.backgroundPosition = `${ox}px ${oy}px`;
+      document.body.style.backgroundSize = `${46 * s}px ${46 * s}px`;
     };
     fit();
     window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    return () => { window.removeEventListener("resize", fit); document.body.style.backgroundPosition = ""; document.body.style.backgroundSize = ""; };
   }, []);
   return (
     <div id="vp">

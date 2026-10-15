@@ -10,9 +10,9 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;background:#06100c;color:var(--cream);overflow:hidden;font-family:var(--mono)}
+html,body{height:100%;margin:0;background-color:var(--felt);background-image:linear-gradient(var(--felt-grid) 1px,transparent 1px),linear-gradient(90deg,var(--felt-grid) 1px,transparent 1px);background-size:46px 46px;color:var(--cream);overflow:hidden;font-family:var(--mono)}
 button{font:inherit;cursor:pointer}
-#vp{position:fixed;inset:0;overflow:hidden;background:#06100c}
+#vp{position:fixed;inset:0;overflow:hidden;background:transparent}
 #stage{position:absolute;left:0;top:0;width:1360px;height:850px;transform-origin:0 0;overflow:hidden;background-color:var(--felt);background-image:linear-gradient(var(--felt-grid) 1px,transparent 1px),linear-gradient(90deg,var(--felt-grid) 1px,transparent 1px);background-size:46px 46px;font-family:var(--mono);color:var(--cream)}
 .ab{position:absolute}
 .m{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase}
@@ -218,3 +218,7 @@ button{font:inherit;cursor:pointer}
 #chalkp .cline>b{font:400 24px/1 var(--hand);letter-spacing:0;text-transform:none;color:var(--chalk);margin-right:4px}
 #chalkp p,#chalkp .cline{font-weight:400;color:var(--cream,#f3ead2)}
 #chalkp .cline>b{color:var(--chalk)}
+
+#chalkp,#chalkp p,#chalkp .cline,#chalkp .mn{font-family:var(--mono);font-weight:400;font-size:13px;line-height:1.65;color:#fff}
+#chalkp .cline>b{font:400 24px/1 var(--hand);color:var(--chalk)}
+#chalkp h3{color:var(--chalk)}
