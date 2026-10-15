@@ -246,3 +246,17 @@ button{font:inherit;cursor:pointer}
 .tnote{font-size:24px}
 .panel .goal{font-size:24px;line-height:1.25}
 #com,#chalkp h3,#chalkp .cline>b,.tnote,.panel .goal,.lede{text-shadow:0 0 1px rgba(255,255,255,.35),0 0 8px rgba(255,216,74,.18)}
+
+/* welcome */
+.screen.welcome{justify-content:flex-start;padding:54px 60px 0}
+.screen.welcome h1{margin:0;font:800 214px/.9 var(--display);letter-spacing:-.06em}
+.screen.welcome .lede{margin:34px 0 0;max-width:620px;font:400 14px/1.75 var(--mono);color:rgba(243,234,210,.9)}
+.screen.welcome .cta{margin-top:26px}
+.m144{position:absolute;left:60px;right:60px;bottom:56px;display:flex;flex-direction:column;gap:9px}
+.m144 .mk{color:var(--chalk);font-size:10px;margin-bottom:6px}
+.m144 .mrow{display:flex;align-items:center;gap:18px}
+.m144 .mtiles{flex:1;display:grid;grid-template-columns:repeat(36,1fr);gap:3px}
+.m144 i{display:block;position:relative;height:34px;background:var(--tile);border-radius:3px;box-shadow:0 2px 0 var(--tile-edge);opacity:.92}
+.m144 i b{position:absolute;left:18%;right:18%;top:22%;height:30%;border-radius:2px}
+.m144 i.lit{opacity:1;transform:translateY(-8px);outline:2px solid var(--chalk);outline-offset:2px}
+.m144 .ml{width:128px;font:500 9px/1.35 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:rgba(243,234,210,.65)}

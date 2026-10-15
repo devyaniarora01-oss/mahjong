@@ -16,27 +16,46 @@ export function Rounds({ now }: { now: number }) {
   );
 }
 
+const MAP_ROWS: { label: string; color: (i: number) => string }[] = [
+  { label: "Characters · 36", color: () => "#c8321e" },
+  { label: "Bamboo · 36", color: () => "#1b7a4e" },
+  { label: "Dots · 36", color: () => "#1d4f9a" },
+  { label: "Winds 16 · Dragons 12 · Flowers 4 · Seasons 4", color: (i) => (i < 16 ? "#16202e" : i < 28 ? ["#c8321e", "#1b7a4e", "#1d4f9a"][(i - 16) % 3] : i < 32 ? "#b3365a" : "#2b6cb0") },
+];
+// fixed positions (row-column) of the 14 lifted tiles, so server and client render the same thing
+const LIT = new Set(["3-3", "2-11", "1-19", "0-25", "1-6", "3-31", "3-15", "2-22", "0-1", "3-28", "1-9", "2-34", "1-17", "0-5"]);
+
+/** All 144 tiles in one picture, grouped by kind. Fourteen are lifted: the hand you will hold. */
+function Map144() {
+  return (
+    <div className="m144" aria-hidden="true">
+      <div className="mk m">▲ your 14 tiles</div>
+      {MAP_ROWS.map((row, r) => (
+        <div className="mrow" key={r}>
+          <div className="mtiles">
+            {Array.from({ length: 36 }, (_, i) => (
+              <i key={i} className={LIT.has(`${r}-${i}`) ? "lit" : ""}><b style={{ background: row.color(i) }} /></i>
+            ))}
+          </div>
+          <span className="ml m">{row.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** First screen: before anything is dealt. */
 export function Welcome({ onBegin, error }: { onBegin: () => void; error?: string }) {
-  const deco: [string, number, number, number, number][] = [
-    ["c5", 40, 30, 120, -8], ["R", 190, 10, 110, 6], ["d5", 330, 40, 120, -4],
-    ["b8", 120, 210, 130, 5], ["E", 290, 230, 120, -6], ["F1", 440, 190, 110, 9],
-    ["d1", 20, 410, 120, 4], ["G", 170, 440, 120, -5], ["c9", 320, 430, 130, 7], ["T2", 450, 400, 100, -7],
-  ];
   return (
-    <div className="screen" data-screen="welcome">
-      <h1>Mahjong<br /><em>Coach</em></h1>
-      <div className="stats">
-        {[["108", "Numbered tiles"], ["16", "Winds"], ["12", "Dragons"], ["4", "Flowers"], ["4", "Seasons"]].map(([n, l]) => <div className="stat" key={l}><b>{n}</b><span>{l}</span></div>)}
-      </div>
+    <div className="screen welcome" data-screen="welcome">
+      <h1>Mahjong</h1>
+      <p className="lede">Mahjong is played through directional rounds; each round begins with a different direction and can have its own rules. Your goal is to make a valid 14-tile Mahjong hand before anyone else.</p>
       <div className="cta">
         <button type="button" className="btn pri" onClick={onBegin}>Begin</button>
         <Rounds now={0} />
       </div>
       {error && <p role="alert" className="err" style={{ position: "static", textAlign: "left", marginTop: 14 }}>{error}</p>}
-      <div className="deco" aria-hidden="true">
-        {deco.map(([k, x, y, w, a], i) => <div key={i} style={{ position: "absolute", left: x, top: y, transform: `rotate(${a}deg)` }}><Keys keys={[k]} w={w} /></div>)}
-      </div>
+      <Map144 />
     </div>
   );
 }
