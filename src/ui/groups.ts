@@ -17,8 +17,9 @@ export type HandGroup = {
 const suitCode = (tile: Tile) => (tile.kind === "number" ? ({ character: "c", dot: "d", bamboo: "b" }[tile.suit]) : "");
 const suitWord = (code: string) => ({ c: "characters", d: "dots", b: "bamboo" }[code] ?? "");
 
-export function groupHand(hand: readonly Tile[], opts: { chows: boolean } = { chows: true }): HandGroup[] {
-  const pool = [...hand];
+export function groupHand(hand: readonly Tile[], opts: { chows: boolean; fits?: (tile: Tile) => boolean } = { chows: true }): HandGroup[] {
+  const unfit = opts.fits ? hand.filter((t) => !opts.fits!(t)) : [];
+  const pool = opts.fits ? hand.filter((t) => opts.fits!(t)) : [...hand];
   const take = (tile: Tile) => { const i = pool.findIndex((t) => t.id === tile.id); if (i >= 0) pool.splice(i, 1); };
   const groups: HandGroup[] = [];
 
@@ -70,7 +71,8 @@ export function groupHand(hand: readonly Tile[], opts: { chows: boolean } = { ch
     }
   }
 
-  if (pool.length) groups.push({ kind: "loose", label: `Loose · ${pool.length}`, tiles: [...pool] });
+  const loose = [...pool, ...unfit];
+  if (loose.length) groups.push({ kind: "loose", label: `Loose · ${loose.length}`, tiles: loose });
   return groups;
 }
 

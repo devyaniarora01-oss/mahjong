@@ -16,6 +16,7 @@ import { TableBoard } from "../ui/Table";
 import { BpTile } from "../ui/Tile";
 
 import { groupHand, suitWord } from "../ui/groups";
+import { southCardAllows } from "../game/south-fit";
 import { EastVisual, SouthCardKey, SouthVisual, TOUR_META, TourOverlay, northTutorialFor, southTutorial, tutorial, westTutorial, type RoundKey } from "../ui/Lessons";
 import { FinalResults, Modal, RoundSetup, Welcome } from "../ui/Screens";
 
@@ -556,7 +557,8 @@ export default function HomePage() {
   const showBest = () => { const options = bestMoveOptions(game, humanSeat); setBestIdx(0); setCoachOpen(true); setMoveOptions(options); if (game.phase === "charleston" && options.length === 3) { setCharlestonSelection(options.map((option) => option.tileId)); setSelected(options[0].tileId); } };
   const westLike = game.round === "west" || (game.round === "north" && game.north?.format === "west");
   const eastLike = game.round === "east" || !game.round || (game.round === "north" && game.north?.format === "east");
-  const groups = explainMode && isPlaying ? groupHand(tableGame.players[humanSeat].hand, { chows: !westLike }) : undefined;
+  const southFitCard = (game.round === "south" || (game.round === "north" && game.north?.format === "south")) ? game.south?.cards[humanSeat] : undefined;
+  const groups = explainMode && isPlaying ? groupHand(tableGame.players[humanSeat].hand, { chows: !westLike && (!southFitCard || /chow|run/i.test(southFitCard.goal)), fits: southFitCard ? (tile) => southCardAllows(southFitCard, tile) : undefined }) : undefined;
   const needGroup = groups?.find((g) => g.kind === "need");
   const setCount = (groups?.filter((g) => g.kind === "set").length ?? 0) + player.melds.length;
   const hasPair = !!groups?.some((g) => g.kind === "pair");

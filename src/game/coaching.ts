@@ -1,5 +1,6 @@
 import { type EastRoundState } from "./state";
 import type { SouthCard } from "./south-cards";
+import { southCardAllows } from "./south-fit";
 import { type Seat, type Tile, tileLabel as rawTileLabel } from "./tiles";
 
 export type CoachingOption = { tileId: string; title: string; reason: string; preserves: string; lookingFor: string; tableWatch?: string; alternative?: string };
@@ -23,15 +24,8 @@ const countGroups = (hand: readonly Tile[]): Tile[][] => Object.values(hand.redu
 /** Whether a tile directly belongs to the active South Card target. This is a
  * coaching classification, not a new game rule: it prevents required singleton
  * Winds/Dragons from being described as weak merely because they have no pair. */
-function servesSouthCard(tile: Tile, goalText: string): boolean {
-  const goal = goalText.toLowerCase();
-  if (tile.kind === "wind") return goal.includes("wind");
-  if (tile.kind === "dragon") return goal.includes("dragon");
-  if (tile.kind !== "number") return false;
-  if (goal.includes("no honour")) return true;
-  if (goal.includes(tile.suit) || goal.includes(tileLabel(tile).toLowerCase())) return true;
-  if (goal.includes(`${tile.rank}s`) || goal.includes(` ${tile.rank} `)) return true;
-  return /pair|pung|kong|chow|run|crochet|knit|same suit|mixed|odd-numbered|numbered/.test(goal);
+function servesSouthCard(tile: Tile, card: SouthCard): boolean {
+  return southCardAllows(card, tile);
 }
 
 function southMeldCardCheck(kind: "pung" | "pureChow" | "crochet" | "knit" | "kong", goalText: string): string {
@@ -241,13 +235,16 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
   const westFormat = state.round === "west" || (state.round === "north" && state.north?.format === "west");
   if (southFormat && state.south) {
     const card = state.south.cards[seat];
-    const analysis = analyseHand(state, seat);
+    // Only tiles this card can ever use count as progress; the rest are loose.
+    const fitHand = hand.filter((tile) => southCardAllows(card, tile));
+    const offHand = hand.filter((tile) => !southCardAllows(card, tile) && tile.kind !== "flower" && tile.kind !== "season");
+    const analysis = analyseHand({ ...state, players: { ...state.players, [seat]: { ...player, hand: fitHand } } }, seat);
     const allSouthTiles = [...hand, ...player.melds.flatMap((meld) => meld.tiles)];
     const cardChecklist = southCardChecklist(card, allSouthTiles);
     const requiresEveryWind = /1 of each wind/i.test(card.goal);
     const heldWinds = new Set(hand.filter((tile): tile is Extract<Tile, { kind: "wind" }> => tile.kind === "wind").map((tile) => tile.wind));
     const missingWinds = (["east", "south", "west", "north"] as const).filter((wind) => !heldWinds.has(wind));
-    const pairs = countGroups(hand)
+    const pairs = countGroups(fitHand)
       .filter((group) => group.length === 2)
       .map((group) => {
         const tile = group[0];
@@ -265,10 +262,10 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
     const developing = analysis.developingChows.map((item) => cardUsesSequences
       ? `${item.tiles} — these consecutive tiles can become a Chow if you draw ${item.needs}. ${card.title} includes a Chow or Run, so this is a useful path.`
       : `${item.tiles} — these are consecutive tiles, but ${card.title} is not built from Chows or Runs. Your card instead asks for: ${card.goal}`);
-    const weak = hand
-      .filter((tile) => analysis.weakTiles.includes(tileLabel(tile)) && !servesSouthCard(tile, card.goal))
-      .slice(0, 3)
-      .map((tile) => `${tileLabel(tile)} — it does not currently help the specific target on your South Card, and it is not yet part of a pair, Pung, or sequence.`);
+    const weak = countGroups(offHand)
+      .sort((left, right) => right.length - left.length)
+      .slice(0, 4)
+      .map((group) => `${tileLabel(group[0])}${group.length > 1 ? ` ×${group.length}` : ""} — ${card.title} can't use this tile${group.length > 1 ? ", even though it pairs up" : ""}. It is a loose tile for your card.`);
     const requiredSingletons = requiresEveryWind
       ? [`Wind requirement: you have ${heldWinds.size} of the 4 different Winds (${[...heldWinds].map(titleCase).join(", ") || "none"}). ${missingWinds.length ? `Still look for ${missingWinds.map(titleCase).join(", ")}.` : "You already have every required Wind—keep each one."}`]
       : [];
@@ -354,8 +351,11 @@ function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption
   const suitedNeighbours = (tile: Tile) => tile.kind === "number"
     ? hand.filter((other) => other.id !== tile.id && other.kind === "number" && other.suit === tile.suit && Math.abs(other.rank - tile.rank) <= 2).length
     : 0;
-  const namedOnCard = (tile: Tile) => servesSouthCard(tile, card.goal);
+  const namedOnCard = (tile: Tile) => servesSouthCard(tile, card);
   const usefulValue = (tile: Tile) => {
+    const isJoker = state.round === "north" && state.north?.format === "south" && (tile.kind === "flower" || tile.kind === "season");
+    // A tile this card can never use is loose, however neatly it pairs up.
+    if (!namedOnCard(tile) && !isJoker) return 0;
     let value = copyCount(tile) * 26;
     if (state.round === "north" && state.north?.format === "south" && (tile.kind === "flower" || tile.kind === "season")) value += 120;
     if (namedOnCard(tile)) value += 55;
