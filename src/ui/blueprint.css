@@ -233,3 +233,8 @@ button{font:inherit;cursor:pointer}
 #hdr,#com,.pinL{translate:calc(var(--dx,0px)*-1) 0}
 #tools,#chalkp,#tc.pinR,.pinR{translate:var(--dx,0px) 0}
 #dim{left:-2000px;width:5360px;overflow:visible}
+
+.screen>.rounds{margin-bottom:0}
+.screen .cta .rounds b.now{color:var(--chalk);background:none;padding:0}
+.screen .panel{background:rgba(5,20,14,.38);border:1px solid rgba(243,234,210,.22);box-shadow:none;backdrop-filter:none}
+.screen .panel .scores>div{background:rgba(5,20,14,.3)}
