@@ -15,8 +15,8 @@ import { Stage } from "../ui/Stage";
 import { TableBoard } from "../ui/Table";
 import { BpTile } from "../ui/Tile";
 
-import { groupHand, suitWord } from "../ui/groups";
-import { southCardAllows } from "../game/south-fit";
+import { groupHand, suitWord, type HandGroup } from "../ui/groups";
+import { keyLabel, southPlan } from "../game/south-plan";
 import { EastVisual, SouthCardKey, SouthVisual, TOUR_META, TourOverlay, northTutorialFor, southTutorial, tutorial, westTutorial, type RoundKey } from "../ui/Lessons";
 import { FinalResults, Modal, RoundSetup, Welcome } from "../ui/Screens";
 
@@ -558,7 +558,24 @@ export default function HomePage() {
   const westLike = game.round === "west" || (game.round === "north" && game.north?.format === "west");
   const eastLike = game.round === "east" || !game.round || (game.round === "north" && game.north?.format === "east");
   const southFitCard = (game.round === "south" || (game.round === "north" && game.north?.format === "south")) ? game.south?.cards[humanSeat] : undefined;
-  const groups = explainMode && isPlaying ? groupHand(tableGame.players[humanSeat].hand, { chows: !westLike && (!southFitCard || /chow|run/i.test(southFitCard.goal)), fits: southFitCard ? (tile) => southCardAllows(southFitCard, tile) : undefined }) : undefined;
+  const cardGroups = (): HandGroup[] | undefined => {
+    if (!southFitCard) return undefined;
+    const concealed = tableGame.players[humanSeat].hand;
+    const plan = southPlan(southFitCard, [...concealed, ...player.melds.flatMap((meld) => meld.tiles)], concealed);
+    if (!plan) return undefined;
+    const ids = new Set(concealed.map((tile) => tile.id));
+    const toKey = (key: string) => { const [kind, v] = key.split("-"); return kind === "wind" ? v[0].toUpperCase() : kind === "dragon" ? ({ red: "R", green: "G", white: "H" } as Record<string, string>)[v] : `${({ bamboo: "b", character: "c", dot: "d" } as Record<string, string>)[kind]}${v}`; };
+    const out: HandGroup[] = [];
+    plan.slots.forEach((slot) => {
+      if (!slot.held.length || !slot.held.every((tile) => ids.has(tile.id))) return;
+      if (slot.complete) out.push({ kind: slot.size === 2 ? "pair" : "set", label: `${slot.name} ✓`, tiles: slot.held });
+      else out.push({ kind: "need", label: `${slot.name.replace(/ in \w+$/, "")} · need ${slot.missing.length}`, tiles: slot.held, needs: slot.missing.map(toKey) });
+    });
+    const loose = [...plan.spare, ...plan.offCard].filter((tile) => ids.has(tile.id));
+    if (loose.length) out.push({ kind: "loose", label: `Loose · ${loose.length}`, tiles: loose });
+    return out;
+  };
+  const groups = explainMode && isPlaying ? (cardGroups() ?? groupHand(tableGame.players[humanSeat].hand, { chows: !westLike })) : undefined;
   const needGroup = groups?.find((g) => g.kind === "need");
   const setCount = (groups?.filter((g) => g.kind === "set").length ?? 0) + player.melds.length;
   const hasPair = !!groups?.some((g) => g.kind === "pair");

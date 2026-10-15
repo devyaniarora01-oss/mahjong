@@ -1,6 +1,7 @@
 import { type EastRoundState } from "./state";
 import type { SouthCard } from "./south-cards";
 import { southCardAllows } from "./south-fit";
+import { keyLabel, southPlan } from "./south-plan";
 import { type Seat, type Tile, tileLabel as rawTileLabel } from "./tiles";
 
 export type CoachingOption = { tileId: string; title: string; reason: string; preserves: string; lookingFor: string; tableWatch?: string; alternative?: string };
@@ -235,45 +236,36 @@ export function handSummary(state: EastRoundState, seat: Seat): HandSummary {
   const westFormat = state.round === "west" || (state.round === "north" && state.north?.format === "west");
   if (southFormat && state.south) {
     const card = state.south.cards[seat];
-    // Only tiles this card can ever use count as progress; the rest are loose.
-    const fitHand = hand.filter((tile) => southCardAllows(card, tile));
-    const offHand = hand.filter((tile) => !southCardAllows(card, tile) && tile.kind !== "flower" && tile.kind !== "season");
-    const analysis = analyseHand({ ...state, players: { ...state.players, [seat]: { ...player, hand: fitHand } } }, seat);
+    // Read the hand against the card itself: which parts of the card are done,
+    // which are started, and which tiles the card can never use.
     const allSouthTiles = [...hand, ...player.melds.flatMap((meld) => meld.tiles)];
+    const plan = southPlan(card, allSouthTiles, hand);
     const cardChecklist = southCardChecklist(card, allSouthTiles);
-    const requiresEveryWind = /1 of each wind/i.test(card.goal);
-    const heldWinds = new Set(hand.filter((tile): tile is Extract<Tile, { kind: "wind" }> => tile.kind === "wind").map((tile) => tile.wind));
-    const missingWinds = (["east", "south", "west", "north"] as const).filter((wind) => !heldWinds.has(wind));
-    const pairs = countGroups(fitHand)
-      .filter((group) => group.length === 2)
-      .map((group) => {
-        const tile = group[0];
-        if (tile.kind === "wind" && /additional wind/i.test(card.goal)) {
-          return `Extra Wind: ${tileLabel(tile)} ×2 — one copy fulfils the “one of each Wind” requirement and the second is the additional Wind your South Card asks for.`;
-        }
-        if (/pair/i.test(card.goal)) return `Pair: ${tileLabel(tile)} ×2 — two matching tiles, which directly contributes to the Pair named on your South Card.`;
-        return `Pair: ${tileLabel(tile)} ×2 — two matching tiles. The Coach compares it with the other structures your South Card requires when suggesting your next move.`;
-      });
-    const pungs = analysis.pungs.map((item) => `Pung: ${item} ×3 — three matching tiles; useful when your South Card asks for Pungs.`);
-    const cardUsesSequences = /chow|run/i.test(card.goal);
-    const completeChows = analysis.chows.map((chow) => cardUsesSequences
-      ? `Complete Chow: ${chow} — three consecutive tiles already complete a Chow, which ${card.title} uses.`
-      : `Complete Chow: ${chow} — this is a complete consecutive group, although ${card.title} is built toward different named structures.`);
-    const developing = analysis.developingChows.map((item) => cardUsesSequences
-      ? `${item.tiles} — these consecutive tiles can become a Chow if you draw ${item.needs}. ${card.title} includes a Chow or Run, so this is a useful path.`
-      : `${item.tiles} — these are consecutive tiles, but ${card.title} is not built from Chows or Runs. Your card instead asks for: ${card.goal}`);
-    const weak = countGroups(offHand)
-      .sort((left, right) => right.length - left.length)
-      .slice(0, 4)
-      .map((group) => `${tileLabel(group[0])}${group.length > 1 ? ` ×${group.length}` : ""} — ${card.title} can't use this tile${group.length > 1 ? ", even though it pairs up" : ""}. It is a loose tile for your card.`);
-    const requiredSingletons = requiresEveryWind
-      ? [`Wind requirement: you have ${heldWinds.size} of the 4 different Winds (${[...heldWinds].map(titleCase).join(", ") || "none"}). ${missingWinds.length ? `Still look for ${missingWinds.map(titleCase).join(", ")}.` : "You already have every required Wind—keep each one."}`]
-      : [];
-    const exposedSets = player.melds.map((meld) => `Exposed ${meldTitle(meld.kind)}: ${meld.tiles.map(tileLabel).join(" · ")} — ${southMeldCardCheck(meld.kind, card.goal)}`);
+    const heldLabels = (tiles: Tile[]) => tiles.map(tileLabel).join(" · ");
+    const built = plan ? plan.slots.filter((slot) => slot.complete).map((slot) => `${slot.name}: ${heldLabels(slot.held)} — done.`) : [];
+    const developing = plan ? plan.slots.filter((slot) => !slot.complete && slot.held.length > 0).map((slot) => `${slot.name}: you have ${heldLabels(slot.held)}; you still need ${slot.missing.map(keyLabel).join(" · ")}.`) : [];
+    const notStarted = plan ? plan.slots.filter((slot) => slot.held.length === 0).map((slot) => slot.name) : [];
+    const offCardTiles = plan ? plan.offCard : hand.filter((tile) => !southCardAllows(card, tile) && tile.kind !== "flower" && tile.kind !== "season");
+    const weak = [
+      ...countGroups(offCardTiles).sort((left, right) => right.length - left.length).map((group) => `${tileLabel(group[0])}${group.length > 1 ? ` ×${group.length}` : ""} — ${card.title} can't use this tile${group.length > 1 ? ", even though it pairs up" : ""}.`),
+      ...(plan?.spare ?? []).slice(0, 2).map((tile) => `${tileLabel(tile)} — this card could use it, but your current plan doesn't need it.`),
+    ].slice(0, 4);
+    const progressLine = plan ? `${plan.complete} of ${plan.slots.length} parts of ${card.title} are done; you're ${plan.tilesAway} tile${plan.tilesAway === 1 ? "" : "s"} away.` : `Card check — ${cardChecklist.join(" ")}`;
+    const focusLine = plan
+      ? (plan.tilesAway === 0 ? `Every part of ${card.title} is in place.` : `${notStarted.length ? `Not started yet: ${[...new Set(notStarted)].join(", ")}. ` : ""}${developing.length ? "Finish the parts you've already started first. " : ""}Tiles outside your card are the ones to pass or discard.`)
+      : "";
     const concealedPatternNote = /crochet|knit/i.test(card.goal)
       ? "Crochets and Knits stay concealed while you build them. They cannot be called as their own discard action; in South only a buy from the player on your left can add a non-completing discard to your hand."
       : "";
-    return { overview: `Your South Card is ${card.title}: ${card.goal} This is your personal Mahjong target for this round.`, progress: `Card check — ${cardChecklist.join(" ")} ${state.round === "north" ? "Flowers and Seasons are concealed jokers here, but cannot form a Pair." : ""}`, built: [...requiredSingletons, ...exposedSets, ...pairs, ...pungs, ...completeChows], developing, weak, scoring: [`Completing ${card.title} records ${card.score.toLocaleString()} points.${card.bonus ? ` ${card.bonus}` : ""}${state.round === "north" ? " North does not add Flower/Season awards." : ""}`, "Score focus: build toward your own card’s printed value; an attractive East-style group is only worth keeping if it helps that card."], focus: `${concealedPatternNote} Your immediate focus is ${card.goal} Keep tiles that directly help this requirement; a useful-looking East Round Chow is not automatically useful in South.` };
+    return {
+      overview: `Your South Card is ${card.title}: ${card.goal} This is your personal Mahjong target for this round.`,
+      progress: `${progressLine} ${state.round === "north" ? "Flowers and Seasons are concealed jokers here, but cannot form a Pair." : ""}`.trim(),
+      built,
+      developing,
+      weak,
+      scoring: [`Completing ${card.title} records ${card.score.toLocaleString()} points.${card.bonus ? ` ${card.bonus}` : ""}${state.round === "north" ? " North does not add Flower/Season awards." : ""}`, "Score focus: build toward your own card’s printed value; an attractive East-style group is only worth keeping if it helps that card."],
+      focus: `${concealedPatternNote} ${focusLine} Your card needs: ${card.goal}`.trim(),
+    };
   }
   if (westFormat) {
     const groups = countGroups(hand);
@@ -352,7 +344,9 @@ function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption
     ? hand.filter((other) => other.id !== tile.id && other.kind === "number" && other.suit === tile.suit && Math.abs(other.rank - tile.rank) <= 2).length
     : 0;
   const namedOnCard = (tile: Tile) => servesSouthCard(tile, card);
-  const usefulValue = (tile: Tile) => {
+  const plan = southPlan(card, [...hand, ...state.players[seat].melds.flatMap((meld) => meld.tiles)], hand);
+  const inPlan = (tile: Tile) => !plan || plan.usedIds.has(tile.id);
+  const baseValue = (tile: Tile) => {
     const isJoker = state.round === "north" && state.north?.format === "south" && (tile.kind === "flower" || tile.kind === "season");
     // A tile this card can never use is loose, however neatly it pairs up.
     if (!namedOnCard(tile) && !isJoker) return 0;
@@ -365,6 +359,13 @@ function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption
     if (tile.kind !== "number" && goal.includes("no honour")) value = 0;
     if (tile.kind === "number" && goal.includes("odd-numbered") && tile.rank % 2 === 1) value += 55;
     return value;
+  };
+  // Tiles the best reading of the card uses are kept; tiles the card can use but doesn't need come next; tiles it can never use go first.
+  const usefulValue = (tile: Tile) => {
+    const base = baseValue(tile);
+    if (state.round === "north" && state.north?.format === "south" && (tile.kind === "flower" || tile.kind === "season")) return base;
+    if (!namedOnCard(tile)) return 0;
+    return inPlan(tile) ? 200 + base : Math.min(base, 60);
   };
   const sortedCandidates = [...hand].sort((a, b) => usefulValue(a) - usefulValue(b) || tileLabel(a).localeCompare(tileLabel(b)));
   // Charleston genuinely needs three selected tiles. A normal South discard
@@ -380,8 +381,13 @@ function southBestMoveOptions(state: EastRoundState, seat: Seat): CoachingOption
     const copies = copyCount(tile);
     const neighbours = suitedNeighbours(tile);
     const exactMatch = namedOnCard(tile);
+    const sparePlan = exactMatch && !inPlan(tile);
     const why = state.round === "north" && state.north?.format === "south" && (tile.kind === "flower" || tile.kind === "season")
       ? `${tileLabel(tile)} is a concealed joker in South-as-North, so it can stand in for a needed card. Keep it unless your South Card already has a stronger completed route.`
+      : !exactMatch
+      ? `${tileLabel(tile)} is not used anywhere on ${card.title}${copies > 1 ? ", even though you hold a matching copy" : ""}. It can never help you complete this card, so it is the safest tile to give away.`
+      : sparePlan
+      ? `${card.title} could use ${tileLabel(tile)}, but the best way to build the card from your current hand doesn't need it. It is a spare, so it goes before the tiles that are already working.`
       : !exactMatch && copies === 1 && neighbours === 0
       ? `${tileLabel(tile)} does not appear in your card’s requirement and it has no matching copy or nearby numbered tile in your hand to develop. It is one of the safest tiles to give away during this exchange.`
       : !exactMatch

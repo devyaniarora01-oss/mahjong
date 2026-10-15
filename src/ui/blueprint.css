@@ -324,3 +324,4 @@ button{font:inherit;cursor:pointer}
 .veil{background:transparent}
 .screen.welcome .door .dg{bottom:-150px}
 .veil{background:transparent;-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
+.veil{left:calc(var(--dx,0px)*-1);right:calc(var(--dx,0px)*-1)}
