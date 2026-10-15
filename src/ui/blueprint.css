@@ -303,3 +303,13 @@ button{font:inherit;cursor:pointer}
 .trans .obj .kick{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--chalk)}
 .trans .obj .goal{color:var(--chalk)}
 #com{font:500 16px/1.4 var(--display)}
+
+/* transition v2: everything for the round lives inside the open door's two lines */
+.trans .dn{top:40px}.trans .tk{top:66px}.trans .lk{top:66px}
+.trans .obj{top:36px}
+.trans .obj h1{position:static;margin:0;font:800 104px/.88 var(--display);letter-spacing:-.05em}
+.trans .obj h1 em{font-style:normal;color:var(--chalk)}
+.trans .obj .intro{position:static;width:auto;max-width:520px;margin:18px 0 0;font:400 12.5px/1.7 var(--mono);color:rgba(243,234,210,.92)}
+.trans .obj .kick{margin-top:30px}
+.trans .obj .tsc{position:static;margin-top:44px;display:flex;gap:16px;flex-wrap:wrap}
+.jumpfix{top:auto!important;bottom:18px}

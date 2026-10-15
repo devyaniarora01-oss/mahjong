@@ -79,7 +79,7 @@ function Cell({ title, children, note }: { title: string; children: ReactNode; n
 }
 
 export function EastVisual({ step }: { step: number }) {
-  if (step === 0) {
+  if (step === 1) {
     return (
       <div className="lesson g4 vis">
         <Cell title="Numbered suits"><Keys keys={keys("b1", "c1", "d1")} /></Cell>
@@ -89,7 +89,7 @@ export function EastVisual({ step }: { step: number }) {
       </div>
     );
   }
-  if (step === 3) {
+  if (step === 4) {
     const items: [string, string[], string][] = [
       ["Pung", ["b6", "b6", "b6"], "Three identical tiles."],
       ["Pure Chow", ["d4", "d5", "d6"], "Three in a row, one suit."],

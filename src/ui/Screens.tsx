@@ -76,9 +76,11 @@ export function RoundSetup(props: {
           return (
             <div key={d.n} className={`door ${st}`}>
               {st === "done" && <><div className="dn m">{d.n}</div><div className="tk m">✓ Complete</div></>}
-              {st === "locked" && <><div className="dn m">{d.n}</div><p className="dd">{d.d}</p><div className="lk m">⌀ Opens after {d.after}</div></>}
+              {st === "locked" && <><div className="dn m">{d.n}</div><div className="lk m">⌀ Opens later</div></>}
               {st === "active" && (
                 <div className="obj">
+                  <h1>{cap(round)}<br /><em>Round</em></h1>
+                  <p className="intro">{intro}</p>
                   <div className="kick">{kicker}</div>
                   <h2>{heading}</h2>
                   {southCard && <><div className="goal">{southCard.goal}</div><div className="pts m">{southCard.score.toLocaleString()} points{southCard.bonus ? ` · ${southCard.bonus}` : ""}</div><SouthCardKey card={southCard} /></>}
@@ -86,6 +88,10 @@ export function RoundSetup(props: {
                   {round === "north" && <div className="chips"><span>East-as-North</span><span>South-as-North</span><span>West-as-North</span></div>}
                   <p>{body}</p>
                   <button type="button" className="btn pri" onClick={onStart}>{cta}</button>
+                  <div className="tsc">
+                    {SEAT_ORDER.map((s) => <span key={s} className={s === you ? "you" : ""}>{cap(s)}{s === you ? " · you" : ""} <b>{scores[s].toLocaleString()}</b></span>)}
+                  </div>
+
                   {error && <p role="alert" className="err" style={{ position: "static", textAlign: "left", marginTop: 14 }}>{error}</p>}
                 </div>
               )}
@@ -93,11 +99,6 @@ export function RoundSetup(props: {
             </div>
           );
         })}
-      </div>
-      <h1 className="pinL">{cap(round)} <em>Round</em></h1>
-      <p className="intro pinL">{intro}</p>
-      <div className="tsc pinR">
-        {SEAT_ORDER.map((s) => <span key={s} className={s === you ? "you" : ""}>{cap(s)}{s === you ? " · you" : ""} <b>{scores[s].toLocaleString()}</b></span>)}
       </div>
     </div>
   );
