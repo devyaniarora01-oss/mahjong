@@ -14,7 +14,7 @@ import { createTileSet, tileLabel as rawTileLabel, type Seat, type Tile } from "
 import { Stage } from "../ui/Stage";
 import { TableBoard } from "../ui/Table";
 import { BpTile } from "../ui/Tile";
-import { ChalkArrow, DiscardArrow } from "../ui/Chalk";
+import { DiscardArrow } from "../ui/Chalk";
 import { groupHand, suitWord } from "../ui/groups";
 import { EastVisual, SouthCardKey, SouthVisual, TOUR_META, TourOverlay, northTutorialFor, southTutorial, tutorial, westTutorial, type RoundKey } from "../ui/Lessons";
 import { FinalResults, Modal, RoundSetup, Welcome } from "../ui/Screens";
@@ -614,7 +614,6 @@ export default function HomePage() {
 
       {coachOpen && isPlaying && (
         <>
-          <ChalkArrow target={bestMode ? `[data-tile="${moveOptions[bestIndex]?.tileId}"]` : needGroup ? "[data-ghost]" : "#none"} watch={`${bestMode}-${bestIndex}-${groups?.length}`} />
           <div className="ab" id="chalkp">
             <button type="button" className="x" onClick={() => setCoachOpen(false)} aria-label="Close coach">×</button>
             {bestMode ? <>
