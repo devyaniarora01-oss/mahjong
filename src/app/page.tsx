@@ -599,7 +599,7 @@ export default function HomePage() {
 
   return (
     <Stage className={`${tourScores ? "tour-scores" : ""} ${coachOpen && isPlaying ? "coach-on" : ""}`}>
-      <div className="ab" id="hdr"><div className="eb m"><i /><span>{eyebrow}</span></div><h1>{headline}</h1></div>
+      <div className="ab" id="hdr"><div className="eb m"><i /><span>{eyebrow}</span></div><h1>{headline.replace(/\.$/, "")}</h1></div>
       {isPlaying && <div className="ab" id="com">{commentary}</div>}
       <div className="ab" id="tools">
         <div className="row">
