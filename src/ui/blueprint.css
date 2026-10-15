@@ -313,3 +313,4 @@ button{font:inherit;cursor:pointer}
 .trans .obj .kick{margin-top:30px}
 .trans .obj .tsc{position:static;margin-top:44px;display:flex;gap:16px;flex-wrap:wrap}
 .jumpfix{top:auto!important;bottom:18px}
+.modal{box-shadow:none}

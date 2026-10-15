@@ -681,10 +681,10 @@ export default function HomePage() {
         <Modal label="Your South Card" onClose={() => setSouthCardOpen(false)}>
           <div className="kick">Your secret South Card</div>
           <h2>{southCard.title}</h2>
-          <p>This is the hand you are privately trying to make in {game.round === "north" ? "South-as-North" : "South Round"}.</p>
+          <p>This is your objective: the hand you have to make in {game.round === "north" ? "South-as-North" : "South Round"}. Only you can see it.</p>
           <div className="goal">{southCard.goal}</div>
           <div className="m" style={{ marginTop: 8, color: "rgba(243,234,210,.7)" }}>{southCard.score.toLocaleString()} points{southCard.bonus ? ` · Bonus: ${southCard.bonus}` : ""}</div>
-          <p>The tiles below show the building blocks named on this card. {game.round === "north" ? "Flowers and Seasons are concealed jokers here, but cannot form a Pair. " : ""}Keep this card open whenever you want to compare your hand to its goal.</p>
+          <p>The tiles below show the building blocks named on this card. {game.round === "north" ? "Flowers and Seasons are concealed jokers here, but cannot form a Pair. " : ""}You can open this card again any time from “Your South Card” at the top right of the table.</p>
           <SouthCardKey card={southCard} />
           <div className="actions"><button type="button" className="btn pri" onClick={() => setSouthCardOpen(false)}>Continue</button></div>
         </Modal>

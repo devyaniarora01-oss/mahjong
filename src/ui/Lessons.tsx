@@ -17,7 +17,6 @@ export const tutorial = [
 
 export const southTutorial = [
   ["Welcome to South Round", "Same table as East, but every player now has a private South Card with their own winning objective."],
-  ["Your South Card is your objective", "Your secret card tells you the exact tiles and groups you need to complete. Keep comparing your hand to this card, not to another player’s card. Your secret card stays available at the top of the table whenever you need it."],
   ["Charleston exchange", "Before the first draw, every player passes three concealed tiles three times: Right, then Across, then Left. Use the Coach’s Best Move to identify three tiles that help your own South Card least."],
   ["Buying a discard", "South has one extra exception. When the player immediately to your left discards, you may buy that visible discard for **100 points** even when it does not complete a set yet. It stays concealed in your hand, the 100 goes into the round pot, and you must discard straight away."],
   ["South Round scoring", "A player who completes their own South Card declares Mahjong. If a non-East player wins, every player records the card score and East records double. If East wins, every other player records double. The 100-point buy pot goes to the winner. Any printed card bonus is shown on the card."],
@@ -56,16 +55,16 @@ const RIGHT = { x: 960, y: 150 };
 
 export const TOUR_META: Record<RoundKey, StepMeta[]> = {
   east: [
-    { compass: true, card: { x: 960, y: 130 } },
+    { compass: true, card: RIGHT },
     { card: RIGHT },
     { targets: ["wall"], card: RIGHT },
-    { targets: ["rail"], card: { x: 960, y: 190 } },
-    { card: { x: 360, y: 92, w: 640 } },
+    { targets: ["rail"], card: RIGHT },
+    { card: RIGHT },
     { targets: ["scores"], card: RIGHT },
-    { targets: ["act", "drawn"], card: { x: 975, y: 250 } },
+    { targets: ["act", "drawn"], card: RIGHT },
   ],
-  south: [{ card: RIGHT }, { targets: ["southcard"], card: RIGHT }, { targets: ["act"], card: { x: 975, y: 250 } }, { targets: ["act"], card: { x: 975, y: 250 } }, { targets: ["scores"], card: RIGHT }],
-  west: [{ card: RIGHT }, { targets: ["rail"], card: { x: 960, y: 190 } }, { targets: ["act"], card: { x: 975, y: 250 } }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }],
+  south: [{ card: RIGHT }, { targets: ["act"], card: RIGHT }, { targets: ["act"], card: RIGHT }, { targets: ["scores"], card: RIGHT }],
+  west: [{ card: RIGHT }, { targets: ["rail"], card: RIGHT }, { targets: ["act"], card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }],
   north: [{ card: RIGHT }, { card: RIGHT }, { targets: ["scores"], card: RIGHT }],
 };
 
@@ -100,7 +99,7 @@ export function EastVisual({ step }: { step: number }) {
     ];
     return (
       <div className="vis">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "10px 18px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "10px 18px" }}>
           {items.map(([t, k, d]) => <div key={t}><Keys keys={k} w={28} /><b style={{ font: "700 14px var(--display)" }}>{t}</b><div style={{ font: "400 11px/1.45 var(--mono)", color: "rgba(243,234,210,.75)", marginTop: 3 }}>{d}</div></div>)}
         </div>
         <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(243,234,210,.16)", font: "500 10.5px var(--mono)", letterSpacing: ".06em", textTransform: "uppercase", color: "rgba(243,234,210,.65)" }}>
@@ -135,9 +134,9 @@ export function SouthCardKey({ card }: { card: SouthCard }) {
 
 export function SouthVisual({ step, card }: { step: number; card?: SouthCard }) {
   const flow = (parts: string[]) => <div className="lesson vis"><div className="flow">{parts.map((p, i) => <span key={i}>{i > 0 ? "→ " : ""}{p}</span>)}</div></div>;
-  if (step === 2) return flow(["1 · Right", "2 · Across", "3 · Left"]);
-  if (step === 3) return flow(["Left player's discard", "100 to the pot", "Your hand"]);
-  if (step === 4) return flow(["Card score", "East doubles", "Pot to winner"]);
+  if (step === 1) return flow(["1 · Right", "2 · Across", "3 · Left"]);
+  if (step === 2) return flow(["Left player's discard", "100 to the pot", "Your hand"]);
+  if (step === 3) return flow(["Card score", "East doubles", "Pot to winner"]);
   return null;
 }
 
