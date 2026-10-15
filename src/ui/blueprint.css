@@ -323,3 +323,4 @@ button{font:inherit;cursor:pointer}
 .eo .btn{position:static;margin-top:18px}
 .veil{background:transparent}
 .screen.welcome .door .dg{bottom:-150px}
+.veil{background:transparent;-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
