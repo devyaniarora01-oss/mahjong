@@ -252,11 +252,16 @@ button{font:inherit;cursor:pointer}
 .screen.welcome h1{margin:0;font:800 214px/.9 var(--display);letter-spacing:-.06em}
 .screen.welcome .lede{margin:34px 0 0;max-width:620px;font:400 14px/1.75 var(--mono);color:rgba(243,234,210,.9)}
 .screen.welcome .cta{margin-top:26px}
-.m144{position:absolute;left:60px;right:60px;bottom:56px;display:flex;flex-direction:column;gap:9px}
-.m144 .mk{color:var(--chalk);font-size:10px;margin-bottom:6px}
-.m144 .mrow{display:flex;align-items:center;gap:18px}
-.m144 .mtiles{flex:1;display:grid;grid-template-columns:repeat(36,1fr);gap:3px}
-.m144 i{display:block;position:relative;height:34px;background:var(--tile);border-radius:3px;box-shadow:0 2px 0 var(--tile-edge);opacity:.92}
-.m144 i b{position:absolute;left:18%;right:18%;top:22%;height:30%;border-radius:2px}
-.m144 i.lit{opacity:1;transform:translateY(-8px);outline:2px solid var(--chalk);outline-offset:2px}
-.m144 .ml{width:128px;font:500 9px/1.35 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:rgba(243,234,210,.65)}
+.doors{position:absolute;left:calc(var(--dx,0px)*-1);right:calc(var(--dx,0px)*-1);top:0;bottom:0;display:flex}
+.door{position:relative;flex:1;overflow:hidden;border-left:1px solid rgba(243,234,210,.28)}
+.door:first-child{border-left:0;background:linear-gradient(180deg,rgba(255,216,74,0),rgba(255,216,74,.10))}
+.door .dn{position:absolute;left:28px;top:410px;color:rgba(243,234,210,.85)}
+.door.open .dn{color:var(--chalk)}
+.door .dd{position:absolute;left:28px;top:436px;width:calc(100% - 56px);margin:0;font:400 13px/1.6 var(--mono);color:rgba(243,234,210,.65)}
+.door.locked .dd{opacity:.7}
+.door .btn{position:absolute;left:28px;top:496px}
+.door .lk{position:absolute;left:28px;top:506px;opacity:.55;font-size:10px}
+.door .dg{position:absolute;left:0;right:0;bottom:-100px;text-align:center;font:900 380px/1 var(--cjk,'Noto Serif SC','Songti SC',serif);color:rgba(243,234,210,.13);pointer-events:none;user-select:none}
+.door.open .dg{color:var(--chalk);-webkit-text-stroke:0}
+.screen.welcome h1{position:relative;z-index:2;font-size:206px}
+.screen.welcome .lede{position:relative;z-index:2}
