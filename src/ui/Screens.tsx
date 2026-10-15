@@ -66,8 +66,7 @@ export function RoundSetup(props: {
   const { round, scores, you, intro, kicker, heading, body, southCard, cta, onStart, error } = props;
   return (
     <div className="screen" data-screen={`${round}-setup`}>
-      <div className="eb m"><i /><span>Round transition</span></div>
-      <h1 style={{ fontSize: 96 }}>{cap(round)} <em>Round.</em></h1>
+      <h1 style={{ fontSize: 96 }}>{cap(round)} <em>Round</em></h1>
       <div className="panel">
         <p style={{ marginTop: 0 }}>{intro}</p>
         <ScoreRow scores={scores} you={you} />

@@ -203,3 +203,6 @@ button{font:inherit;cursor:pointer}
 .jumpfix .m{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;opacity:.65}
 .jumpfix .lnk{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--cream);}
 .jumpfix .lnk.on{color:var(--yellow,#f6d84a)}
+#tc ul.ptr{margin:8px 0 0;padding-left:18px;font:400 12.5px/1.6 var(--mono);color:rgba(243,234,210,.88)}
+#tc ul.ptr li::marker{color:var(--yellow,#f6d84a)}
+#tc b{color:var(--cream);font-weight:700}

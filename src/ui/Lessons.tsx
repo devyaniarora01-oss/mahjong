@@ -17,19 +17,18 @@ export const tutorial = [
 ] as const;
 
 export const southTutorial = [
-  ["Welcome to South Round", "South Round uses the same table, Draw Wall, Flower Wall, and turn rhythm you learned in East. The important change is that every player now has a private South Card with their own winning objective."],
-  ["Your South Card is your objective", "Your secret card tells you the exact tiles and groups you need to complete. It replaces the East Round shared four-groups-plus-a-pair target. Keep comparing your hand to this card, not to another player’s card."],
+  ["Welcome to South Round", "Same table as East, but every player now has a private South Card with their own winning objective."],
+  ["Your South Card is your objective", "Your secret card tells you the exact tiles and groups you need to complete. Keep comparing your hand to this card, not to another player’s card. Your secret card stays available at the top of the table whenever you need it."],
   ["Charleston exchange", "Before the first draw, every player passes three concealed tiles three times: Right, then Across, then Left. Use the Coach’s Best Move to identify three tiles that help your own South Card least."],
-  ["Playing South Round", "After Charleston, play returns to the familiar rhythm: draw a concealed tile, consider your own South Card, then discard one tile. Crochet and Knit patterns are built privately in your hand, not called as separate discard actions. Your secret card stays available at the top of the table whenever you need it."],
-  ["Buying a discard", "South has one extra exception. When the player immediately to your left discards, you may buy that visible discard for 100 points even when it does not complete a set yet. It stays concealed in your hand, the 100 goes into the round pot, and you must discard straight away."],
+  ["Buying a discard", "South has one extra exception. When the player immediately to your left discards, you may buy that visible discard for **100 points** even when it does not complete a set yet. It stays concealed in your hand, the 100 goes into the round pot, and you must discard straight away."],
   ["South Round scoring", "A player who completes their own South Card declares Mahjong. If a non-East player wins, every player records the card score and East records double. If East wins, every other player records double. The 100-point buy pot goes to the winner. Any printed card bonus is shown on the card."],
 ] as const;
 
 export const westTutorial = [
   ["Welcome to West Round", "West Round keeps the same table and Charleston exchange, but the goal changes. East moves counterclockwise again, so you are now West."],
   ["Your West hand", "A West Mahjong hand uses only Pungs, Kongs, and one Pair. A Pung is three identical tiles. A Kong is four identical tiles. You must have at least one Kong—Pure Chows do not count in this round."],
-  ["Charleston and discards", "First, pass three tiles Right, then Across, then Left. After that, play is draw and discard as usual. You cannot buy a discard in West. You may take a visible discard only when it immediately makes a Pung or Kong; you cannot take it just to keep for later."],
-  ["Choose a scoring direction", "Use your starting tiles to choose what you want to build. West rewards three broad directions: stay with one numbered suit, keep only Winds and Dragons, or build a Kong-heavy hand. The Coach will point out which direction your current tiles support."],
+  ["Charleston and discards", "First, pass three tiles Right, then Across, then Left. After that, play is draw and discard as usual.\nYou cannot buy a discard in West. You may take a visible discard only when it immediately makes a Pung or Kong; you cannot take it just to keep for later."],
+  ["Choose a scoring direction", "Use your starting tiles to choose what you want to build. West rewards three broad directions:\n• Stay with one numbered suit\n• Keep only Winds and Dragons\n• Build a Kong-heavy hand\nThe Coach will point out which direction your current tiles support."],
   ["One numbered suit", "If you keep only Bamboo, only Characters, or only Dots, you are building a one-suit West hand. It is one of the stronger scoring directions in this round."],
   ["Winds and Dragons only", "A hand made only from Winds and Dragons is another high-scoring West direction. Winds and Dragons are called Honour tiles."],
   ["Clean Mix", "You can combine Honour tiles with numbered tiles. Keep all of your numbered tiles in one suit—for example, Bamboo plus Winds and Dragons. Do not mix Bamboo, Characters, and Dots together. This is called a Clean Mix and scores 1,500 points."],
@@ -67,7 +66,7 @@ export const TOUR_META: Record<RoundKey, StepMeta[]> = {
     { targets: ["scores"], card: RIGHT },
     { targets: ["act", "drawn"], card: { x: 975, y: 250 } },
   ],
-  south: [{ card: RIGHT }, { targets: ["southcard"], card: RIGHT }, { targets: ["act"], card: { x: 975, y: 250 } }, { targets: ["rail"], card: { x: 960, y: 190 } }, { targets: ["act"], card: { x: 975, y: 250 } }, { targets: ["scores"], card: RIGHT }],
+  south: [{ card: RIGHT }, { targets: ["southcard"], card: RIGHT }, { targets: ["act"], card: { x: 975, y: 250 } }, { targets: ["act"], card: { x: 975, y: 250 } }, { targets: ["scores"], card: RIGHT }],
   west: [{ card: RIGHT }, { targets: ["rail"], card: { x: 960, y: 190 } }, { targets: ["act"], card: { x: 975, y: 250 } }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }],
   north: [{ card: RIGHT }, { card: RIGHT }, { targets: ["scores"], card: RIGHT }],
 };
@@ -138,10 +137,9 @@ export function SouthCardKey({ card }: { card: SouthCard }) {
 
 export function SouthVisual({ step, card }: { step: number; card?: SouthCard }) {
   const flow = (parts: string[]) => <div className="lesson vis"><div className="flow">{parts.map((p, i) => <span key={i}>{i > 0 ? "→ " : ""}{p}</span>)}</div></div>;
-  if (step === 1 && card) return <div className="vis"><div style={{ font: "800 18px var(--display)" }}>{card.title}</div><div style={{ font: "400 26px/1.05 var(--hand)", color: "var(--chalk)", marginTop: 6 }}>{card.goal}</div><div className="m" style={{ marginTop: 8, color: "rgba(243,234,210,.7)" }}>{card.score.toLocaleString()} points{card.bonus ? ` · ${card.bonus}` : ""}</div><SouthCardKey card={card} /></div>;
   if (step === 2) return flow(["1 · Right", "2 · Across", "3 · Left"]);
-  if (step === 4) return flow(["Left player's discard", "100 to the pot", "Your hand"]);
-  if (step === 5) return flow(["Card score", "East doubles", "Pot to winner"]);
+  if (step === 3) return flow(["Left player's discard", "100 to the pot", "Your hand"]);
+  if (step === 4) return flow(["Card score", "East doubles", "Pot to winner"]);
   return null;
 }
 
@@ -210,7 +208,7 @@ export function TourOverlay(props: {
       <div id="tc" role="dialog" aria-label={title} style={{ left: card.x, top: card.y, width: card.w ?? 340 }}>
         <div className="eyr"><div className="dots">{Array.from({ length: total }, (_, i) => <i key={i} className={i === index ? "on" : ""} />)}</div></div>
         <h2>{title}</h2>
-        <p>{body}</p>
+        <Body text={body} />
         {visual}
         <div className="nav">
           {index > 0 && <button type="button" className="tb" onClick={onBack}>Back</button>}
@@ -221,4 +219,17 @@ export function TourOverlay(props: {
       </div>
     </>
   );
+}
+
+
+/** Tour body text: blank-line breaks, "• " pointer lines, and **bold** runs. */
+function Body({ text }: { text: string }) {
+  const bold = (t: string) => t.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <b key={i}>{part}</b> : part));
+  const lines = text.split("\n");
+  const out: React.ReactNode[] = [];
+  let items: string[] = [];
+  const flush = () => { if (items.length) { out.push(<ul key={`u${out.length}`} className="ptr">{items.map((t, i) => <li key={i}>{bold(t)}</li>)}</ul>); items = []; } };
+  lines.forEach((line) => { if (line.startsWith("• ")) items.push(line.slice(2)); else { flush(); out.push(<p key={`p${out.length}`}>{bold(line)}</p>); } });
+  flush();
+  return <>{out}</>;
 }
