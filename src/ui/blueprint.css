@@ -191,8 +191,8 @@ button{font:inherit;cursor:pointer}
 .ghb{border:2px dashed rgba(255,255,255,.45);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--chalk);font:800 calc(var(--w,58px)*.34)/1 var(--display)}
 .ghb small{font:500 9px var(--mono);letter-spacing:.06em;margin-top:4px;text-transform:uppercase}
 .hc.ghost{margin-left:2px}
-#chalk{left:0;top:0;width:1360px;height:850px;pointer-events:none;z-index:10}
-#chalk path{fill:none;stroke:var(--chalk);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+#chalk,#chalk2{left:0;top:0;width:1360px;height:850px;pointer-events:none;z-index:10}
+#chalk path,#chalk2 path{fill:none;stroke:var(--chalk);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .cline{display:block;margin:0 0 6px}
 #chalkp{font-size:20px}
 #chalkp .cline>b{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:rgba(243,234,210,.8)}
