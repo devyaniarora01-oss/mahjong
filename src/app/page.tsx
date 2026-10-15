@@ -202,7 +202,9 @@ export default function HomePage() {
   const [southCardOpen, setSouthCardOpen] = useState(false);
   const [charlestonSelection, setCharlestonSelection] = useState<string[]>([]);
   const [decisionNotes, setDecisionNotes] = useState<DecisionNote[]>([]);
-  const [setupStep, setSetupStep] = useState(0);
+  /** The Learn Mahjong tour only opens when the player asks for it. */
+  const NO_TOUR = 9999;
+  const [setupStep, setSetupStep] = useState(NO_TOUR);
   const [selected, setSelected] = useState<string>();
   const [coach, setCoach] = useState("");
   const [moveOptions, setMoveOptions] = useState<CoachingOption[]>([]);
@@ -222,7 +224,7 @@ export default function HomePage() {
     const timer = window.setTimeout(() => setFlowerReveal(undefined), 6_000);
     return () => window.clearTimeout(timer);
   }, [flowerReveal]);
-  const begin = () => { try { const next = startBrowserEastRound(); setRound("east"); setSouthCard(undefined); setDecisionNotes([]); setFlowerReveal(undefined); setOpeningBonusIds(next.players.east.bonusTiles.map((tile) => tile.id)); setOpeningBonusShown(0); setGame(next); setSetupStep(hasSeenTutorial ? tutorial.length : 0); setSelected(undefined); setCoach(hasSeenTutorial ? "Coach tip: you are East, so you begin with 14 tiles and discard first." : ""); setMoveOptions([]); setCoachOpen(false); setActivity(hasSeenTutorial ? "Your 14 normal hand tiles are ready. Any Flowers or Seasons from the deal will appear beside your hand next." : "Welcome. Before your first discard, let’s look at how this East Round table was set up."); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not start a new hand."); } };
+  const begin = () => { try { const next = startBrowserEastRound(); setRound("east"); setSouthCard(undefined); setDecisionNotes([]); setFlowerReveal(undefined); setOpeningBonusIds(next.players.east.bonusTiles.map((tile) => tile.id)); setOpeningBonusShown(0); setGame(next); setSetupStep(NO_TOUR); setSelected(undefined); setCoach("Coach tip: you are East, so you begin with 14 tiles and discard first."); setMoveOptions([]); setCoachOpen(false); setActivity("Your 14 normal hand tiles are ready. Any Flowers or Seasons from the deal will appear beside your hand next."); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not start a new hand."); } };
   const play = () => { const currentTutorial = game?.round === "south" ? southTutorial : game?.round === "west" ? westTutorial : game?.round === "north" ? northTutorialFor(game.north!.format, game.north!.jokerRank) : tutorial; window.localStorage.setItem("mahjong-coach-onboarding", "complete"); setHasSeenTutorial(true); setSetupStep(currentTutorial.length); setCoachOpen(false); setMoveOptions([]); setCoach(explainHand(game!, humanSeatOf(game!), true)); setActivity(game?.round === "south" ? "South Round: compare your tiles to your secret South Card as you play." : game?.round === "west" ? "West Round begins with Charleston. Pass three tiles, then build only Pungs, Kongs, and one Pair." : game?.round === "north" && game.north?.format === "south" ? "South-as-North begins with Charleston. Follow your South Card; Flowers and Seasons are concealed jokers, and buying is not allowed." : game?.round === "north" && game.north?.format === "west" ? `West-as-North begins with Charleston. ${game.north.jokerRank}s are jokers; build only West Pungs, Kongs, and a Pair.` : game?.round === "north" ? "North Round uses the East-as-North format. South begins with 14 tiles and discards first." : "Your turn — choose a tile in your hand, then discard it. East begins with 14 tiles."); };
   const continueToSouth = () => {
     const cards = dealSouthCards(Math.random);
@@ -246,7 +248,7 @@ export default function HomePage() {
       setRound("east");
       setSouthCard(next.south!.cards[humanSeatOf(next)]);
       setSouthCardOpen(true);
-      setSetupStep(0);
+      setSetupStep(NO_TOUR);
       setSelected(undefined);
       setCharlestonSelection([]);
       setCoachOpen(false);
@@ -264,7 +266,7 @@ export default function HomePage() {
     setRound("south-setup");
     setSouthCard(cards.north);
     setSouthCardOpen(false);
-    setSetupStep(0);
+    setSetupStep(NO_TOUR);
     setSelected(undefined);
     setCharlestonSelection([]);
     setDecisionNotes([]);
@@ -278,7 +280,7 @@ export default function HomePage() {
     setRound("west-setup");
     setSouthCard(undefined);
     setSouthCardOpen(false);
-    setSetupStep(0);
+    setSetupStep(NO_TOUR);
     setSelected(undefined);
     setCharlestonSelection([]);
     setDecisionNotes([]);
@@ -295,7 +297,7 @@ export default function HomePage() {
     setRound("north-setup");
     setSouthCard(undefined);
     setSouthCardOpen(false);
-    setSetupStep(0);
+    setSetupStep(NO_TOUR);
     setSelected(undefined);
     setCharlestonSelection([]);
     setDecisionNotes([]);
@@ -311,7 +313,7 @@ export default function HomePage() {
     setRound("west-setup");
     setSouthCard(undefined);
     setSouthCardOpen(false);
-    setSetupStep(0);
+    setSetupStep(NO_TOUR);
     setSelected(undefined);
     setCharlestonSelection([]);
     setDecisionNotes([]);
@@ -327,7 +329,7 @@ export default function HomePage() {
     setRound("north-setup");
     setSouthCard(undefined);
     setSouthCardOpen(false);
-    setSetupStep(0);
+    setSetupStep(NO_TOUR);
     setSelected(undefined);
     setCharlestonSelection([]);
     setDecisionNotes([]);
@@ -360,7 +362,7 @@ export default function HomePage() {
       setRound("east");
       setSouthCard(next.south?.cards[humanSeatOf(next)]);
       setSouthCardOpen(false);
-      setSetupStep(0);
+      setSetupStep(NO_TOUR);
       setSelected(undefined);
       setCharlestonSelection([]);
       setDecisionNotes([]);
@@ -375,7 +377,7 @@ export default function HomePage() {
   };
   const startWestRound = () => {
     setRound("east");
-    setSetupStep(0);
+    setSetupStep(NO_TOUR);
     setSelected(undefined);
     setCharlestonSelection([]);
     setCoachOpen(false);
@@ -397,7 +399,7 @@ export default function HomePage() {
       const next = startBrowserNorthRound(scores, previousHumanSeat, previousPhysicalSeats, selectedFormat, selectedJokerRank, selectedFormat === "south" ? dealSouthCards(Math.random) : undefined);
       setGame(next);
       setRound("east");
-      setSetupStep(0);
+      setSetupStep(NO_TOUR);
       setSelected(undefined);
       setCharlestonSelection([]);
       setCoachOpen(false);
