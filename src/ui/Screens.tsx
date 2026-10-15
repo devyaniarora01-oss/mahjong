@@ -52,7 +52,7 @@ export function ScoreRow({ scores, you }: { scores: Record<string, number>; you?
   );
 }
 
-/** Between-rounds screen: what changes, where the scores stand, one button to go on. */
+/** Between-rounds screen: the four doors again — finished rounds dim, this one open, the rest locked. */
 export function RoundSetup(props: {
   round: "south" | "west" | "north";
   scores: Record<string, number>;
@@ -67,24 +67,38 @@ export function RoundSetup(props: {
   error?: string;
 }) {
   const { round, scores, you, intro, kicker, heading, body, southCard, cta, onStart, error } = props;
+  const now = round === "south" ? 1 : round === "west" ? 2 : 3;
   return (
-    <div className="screen" data-screen={`${round}-setup`}>
-      <h1 style={{ fontSize: 96 }}>{cap(round)} <em>Round</em></h1>
-      <div className="panel">
-        <p style={{ marginTop: 0 }}>{intro}</p>
-        <ScoreRow scores={scores} you={you} />
-        <div style={{ marginTop: 22 }}>
-          <div className="kick">{kicker}</div>
-          <h2>{heading}</h2>
-          {southCard && <><div className="goal">{southCard.goal}</div><div className="m" style={{ marginTop: 8, color: "rgba(243,234,210,.7)" }}>{southCard.score.toLocaleString()} points{southCard.bonus ? ` · ${southCard.bonus}` : ""}</div><SouthCardKey card={southCard} /></>}
-          <p>{body}</p>
-        </div>
+    <div className="screen trans" data-screen={`${round}-setup`}>
+      <div className="doors">
+        {DOORS.map((d, i) => {
+          const st = i < now ? "done" : i === now ? "active" : "locked";
+          return (
+            <div key={d.n} className={`door ${st}`}>
+              {st === "done" && <><div className="dn m">{d.n}</div><div className="tk m">✓ Complete</div></>}
+              {st === "locked" && <><div className="dn m">{d.n}</div><p className="dd">{d.d}</p><div className="lk m">⌀ Opens after {d.after}</div></>}
+              {st === "active" && (
+                <div className="obj">
+                  <div className="kick">{kicker}</div>
+                  <h2>{heading}</h2>
+                  {southCard && <><div className="goal">{southCard.goal}</div><div className="pts m">{southCard.score.toLocaleString()} points{southCard.bonus ? ` · ${southCard.bonus}` : ""}</div><SouthCardKey card={southCard} /></>}
+                  {round === "west" && <div className="tl"><Keys keys={["b7", "b7", "b7"]} w={34} /><Keys keys={["G", "G", "G", "G"]} w={34} /><Keys keys={["R", "R"]} w={34} /></div>}
+                  {round === "north" && <div className="chips"><span>East-as-North</span><span>South-as-North</span><span>West-as-North</span></div>}
+                  <p>{body}</p>
+                  <button type="button" className="btn pri" onClick={onStart}>{cta}</button>
+                  {error && <p role="alert" className="err" style={{ position: "static", textAlign: "left", marginTop: 14 }}>{error}</p>}
+                </div>
+              )}
+              <div className="dg" aria-hidden="true">{d.glyph}</div>
+            </div>
+          );
+        })}
       </div>
-      <div className="cta" style={{ marginTop: 26 }}>
-        <button type="button" className="btn pri" onClick={onStart}>{cta}</button>
-        <Rounds now={round === "south" ? 1 : round === "west" ? 2 : 3} />
+      <h1 className="pinL">{cap(round)} <em>Round</em></h1>
+      <p className="intro pinL">{intro}</p>
+      <div className="tsc pinR">
+        {SEAT_ORDER.map((s) => <span key={s} className={s === you ? "you" : ""}>{cap(s)}{s === you ? " · you" : ""} <b>{scores[s].toLocaleString()}</b></span>)}
       </div>
-      {error && <p role="alert" className="err" style={{ position: "static", textAlign: "left", marginTop: 14 }}>{error}</p>}
     </div>
   );
 }
@@ -94,7 +108,7 @@ export function FinalResults({ standings, winner, onNew }: { standings: { name: 
     <div className="screen" data-screen="final">
       <div className="eb m"><i /><span>Four rounds complete</span></div>
       <h1 style={{ fontSize: 96 }}>Final <em>results.</em></h1>
-      <p className="lede" style={{ color: "var(--chalk)", fontFamily: "var(--hand)", fontSize: 24, lineHeight: 1.2 }}>{winner}</p>
+      <p className="lede" style={{ color: "var(--chalk)" }}>{winner}</p>
       <div className="panel" style={{ maxWidth: 560, padding: "10px 20px 20px" }}>
         <div className="standings">{standings.map((s, i) => <div key={s.name}><b>#{i + 1}</b><span>{s.name}</span><small>{s.score.toLocaleString()}</small></div>)}</div>
       </div>

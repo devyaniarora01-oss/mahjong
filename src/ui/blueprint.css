@@ -6,7 +6,7 @@
   --red:#c4321f; --blue:#1d4f91; --green:#1f7a47;
   --display:'Bricolage Grotesque',system-ui,sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-  --hand:'Walter Turncoat','Chalkboard SE','Chalkduster','Bradley Hand',cursive;
+  --hand:var(--display);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -265,3 +265,41 @@ button{font:inherit;cursor:pointer}
 .door.open .dg{color:var(--chalk);-webkit-text-stroke:0}
 .screen.welcome h1{position:relative;z-index:2;font-size:206px}
 .screen.welcome .lede{position:relative;z-index:2}
+
+/* no chalk handwriting anywhere: clean display type, same yellow accent */
+#com,#chalkp h3,#chalkp .cline>b,.tnote,.panel .goal,.lede{text-shadow:none}
+#com{font:600 18px/1.3 var(--display);letter-spacing:0}
+#chalkp h3{font:700 22px/1.15 var(--display);letter-spacing:-.01em}
+#chalkp .cline>b{font:500 10.5px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.tnote{font:600 19px/1.15 var(--display)}
+.panel .goal{font:600 20px/1.25 var(--display)}
+
+/* round transition: the four doors as a progress map */
+.screen.trans{padding:0}
+.trans .door{flex:.9}.trans .door:first-child{background:none}
+.trans .door.done{flex:.62}.trans .door.active{flex:2.1;background:linear-gradient(180deg,rgba(255,216,74,0),rgba(255,216,74,.10))}
+.trans .dn{top:286px}.trans .dd{top:314px}.trans .lk{top:384px}
+.trans .tk{position:absolute;left:28px;top:314px;color:var(--chalk);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase}
+.trans .door.done .dn{color:rgba(243,234,210,.6)}.trans .door.active .dn{color:var(--chalk)}
+.trans .door.done .dg{color:rgba(243,234,210,.2)}
+.trans .dg{font-size:245px;bottom:-68px}
+.trans .obj{position:absolute;left:24px;right:24px;top:286px}
+.trans .obj .kick{margin:0}
+.trans .obj h2{margin:6px 0 4px;font:800 34px/1.05 var(--display);letter-spacing:-.015em}
+.trans .obj .goal{margin-top:4px}
+.trans .obj .pts{margin-top:6px;color:rgba(243,234,210,.65)}
+.trans .obj p{margin:10px 0 0;font:400 12.5px/1.6 var(--mono);color:rgba(243,234,210,.85);max-width:560px}
+.trans .obj .tl{display:flex;gap:22px;margin-top:12px;flex-wrap:wrap}
+.trans .obj .chips{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.trans .obj .chips span{border:1px solid rgba(243,234,210,.4);padding:8px 12px;border-radius:4px;font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.trans .obj .btn{margin-top:24px;position:static}
+.trans h1{position:absolute;left:33px;top:30px;margin:0;font:800 125px/.9 var(--display);letter-spacing:-.06em;z-index:3}
+.trans .intro{position:absolute;left:33px;top:169px;width:570px;margin:0;font:400 13.5px/1.75 var(--mono);color:rgba(243,234,210,.92);z-index:3}
+.trans .tsc{position:absolute;right:33px;top:40px;display:flex;gap:16px;z-index:3;font:500 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:rgba(243,234,210,.6)}
+.trans .tsc b{font:600 12px var(--display);letter-spacing:0;color:var(--cream);margin-left:3px}
+.trans .tsc .you,.trans .tsc .you b{color:var(--chalk)}
+.trans .door.active .dg{color:var(--chalk)}
+.trans .tsc{top:78px}
+.trans .obj .kick{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--chalk)}
+.trans .obj .goal{color:var(--chalk)}
+#com{font:500 16px/1.4 var(--display)}
