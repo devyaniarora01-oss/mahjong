@@ -54,7 +54,7 @@ export function ScoreRow({ scores, you }: { scores: Record<string, number>; you?
 
 /** Between-rounds screen: the four doors again — finished rounds dim, this one open, the rest locked. */
 export function RoundSetup(props: {
-  round: "south" | "west" | "north";
+  round: "east" | "south" | "west" | "north";
   scores: Record<string, number>;
   you?: string;
   intro: string;
@@ -67,7 +67,7 @@ export function RoundSetup(props: {
   error?: string;
 }) {
   const { round, scores, you, intro, kicker, heading, body, southCard, cta, onStart, error } = props;
-  const now = round === "south" ? 1 : round === "west" ? 2 : 3;
+  const now = round === "east" ? 0 : round === "south" ? 1 : round === "west" ? 2 : 3;
   return (
     <div className="screen trans" data-screen={`${round}-setup`}>
       <div className="doors">
@@ -76,7 +76,7 @@ export function RoundSetup(props: {
           return (
             <div key={d.n} className={`door ${st}`}>
               {st === "done" && <><div className="dn m">{d.n}</div><div className="tk m">✓ Complete</div></>}
-              {st === "locked" && <><div className="dn m">{d.n}</div><div className="lk m">⌀ Opens later</div></>}
+              {st === "locked" && <><div className="dn m">{d.n}</div><div className="lk m">⌀ Opens after {d.after}</div></>}
               {st === "active" && (
                 <div className="obj">
                   <h1>{cap(round)}<br /><em>Round</em></h1>
@@ -84,6 +84,7 @@ export function RoundSetup(props: {
                   <div className="kick">{kicker}</div>
                   <h2>{heading}</h2>
                   {southCard && <><div className="goal">{southCard.goal}</div><div className="pts m">{southCard.score.toLocaleString()} points{southCard.bonus ? ` · ${southCard.bonus}` : ""}</div><SouthCardKey card={southCard} /></>}
+                  {round === "east" && <div className="tl"><Keys keys={["b6", "b6", "b6"]} w={34} /><Keys keys={["d4", "d5", "d6"]} w={34} /><Keys keys={["c2", "c2"]} w={34} /></div>}
                   {round === "west" && <div className="tl"><Keys keys={["b7", "b7", "b7"]} w={34} /><Keys keys={["G", "G", "G", "G"]} w={34} /><Keys keys={["R", "R"]} w={34} /></div>}
                   {round === "north" && <div className="chips"><span>East-as-North</span><span>South-as-North</span><span>West-as-North</span></div>}
                   <p>{body}</p>

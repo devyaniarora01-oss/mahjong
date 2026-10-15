@@ -6,37 +6,29 @@ import type { SouthCard } from "../game/south-cards";
 import { Keys } from "./Tile";
 
 export const tutorial = [
-  ["This is the East Round", "This game begins with the East Round. East takes the first turn, begins with one extra tile, and therefore discards first."],
+  ["This is the East Round", "This game begins with the East Round. East begins with one extra tile and therefore discards first."],
   ["The 144 tiles", "The full set has 108 numbered tiles, 16 Winds, 12 Dragons, and 8 bonus tiles. Bamboo, Characters, Dots, Winds, and Dragons build your hand. Flowers and Seasons go to the bonus area and are replaced from the Flower Wall."],
   ["Building the table and Flower Wall", "The 144 tiles are shuffled. East rolls and doubles the result to create the Flower Wall. Everyone receives 13 tiles; East receives one extra and starts with 14. Flowers, Seasons, and Kongs take replacement tiles from the Flower Wall. Everything else becomes the Draw Wall."],
-  ["Your objective", "A winning East Round hand has four three-tile groups and one two-tile pair. You will slowly improve incomplete groups while keeping a useful pair."],
   ["The building blocks", "These are the patterns you can create. Look at the tiles—not just the names—to see what makes each pattern valid."],
   ["How scoring works", "Everyone starts at 35,000. When someone declares Mahjong, the game records the East Round score. Flowers and Seasons can add separate bonus awards when their documented combinations are collected. The final result screen explains the score after a hand ends."],
   ["How your turn works", "East begins with 14 tiles and discards one. After that, players draw one tile, consider their hand, and discard one. In East, a discard may be claimed only to complete a Pung, or—by the next player only—a Pure Chow, unless it completes Mahjong. You cannot take a discard merely because you may want it later."],
 ] as const;
 
 export const southTutorial = [
-  ["Welcome to South Round", "Same table as East, but every player now has a private South Card with their own winning objective."],
   ["Charleston exchange", "Before the first draw, every player passes three concealed tiles three times: Right, then Across, then Left. Use the Coach’s Best Move to identify three tiles that help your own South Card least."],
   ["Buying a discard", "South has one extra exception. When the player immediately to your left discards, you may buy that visible discard for **100 points** even when it does not complete a set yet. It stays concealed in your hand, the 100 goes into the round pot, and you must discard straight away."],
   ["South Round scoring", "A player who completes their own South Card declares Mahjong. If a non-East player wins, every player records the card score and East records double. If East wins, every other player records double. The 100-point buy pot goes to the winner. Any printed card bonus is shown on the card."],
 ] as const;
 
 export const westTutorial = [
-  ["Welcome to West Round", "West Round keeps the same table and Charleston exchange, but the goal changes. East moves counterclockwise again, so you are now West."],
-  ["Your West hand", "A West Mahjong hand uses only Pungs, Kongs, and one Pair. A Pung is three identical tiles. A Kong is four identical tiles. You must have at least one Kong—Pure Chows do not count in this round."],
   ["Charleston and discards", "First, pass three tiles Right, then Across, then Left. After that, play is draw and discard as usual.\nYou cannot buy a discard in West. You may take a visible discard only when it immediately makes a Pung or Kong; you cannot take it just to keep for later."],
-  ["Choose a scoring direction", "Use your starting tiles to choose what you want to build. West rewards three broad directions:\n• Stay with one numbered suit\n• Keep only Winds and Dragons\n• Build a Kong-heavy hand\nThe Coach will point out which direction your current tiles support."],
-  ["One numbered suit", "If you keep only Bamboo, only Characters, or only Dots, you are building a one-suit West hand. It is one of the stronger scoring directions in this round."],
-  ["Winds and Dragons only", "A hand made only from Winds and Dragons is another high-scoring West direction. Winds and Dragons are called Honour tiles."],
+  ["Choose a scoring direction", "Use your starting tiles to choose what you want to build. West rewards three broad directions:\n• Stay with one numbered suit (only Bamboo, only Characters or only Dots)\n• Keep only Winds and Dragons, also called Honour tiles\n• Build a Kong-heavy hand, with as many Kongs as you can\nThe Coach will point out which direction your current tiles support."],
   ["Clean Mix", "You can combine Honour tiles with numbered tiles. Keep all of your numbered tiles in one suit—for example, Bamboo plus Winds and Dragons. Do not mix Bamboo, Characters, and Dots together. This is called a Clean Mix and scores 1,500 points."],
-  ["Kong-heavy hands", "Kongs can create another high-scoring West hand. The more of your required groups that are Kongs, the stronger this direction can become."],
   ["Flower and Season bonuses", "Flowers and Seasons are bonus tiles. They are not worth points one by one. You earn a bonus by collecting a matching set: your own direction’s Flower and Season together are worth 500; all four Flowers or all four Seasons are worth 1,000; and one bonus tile for each direction is worth 500. Any score involving East is doubled."],
 ] as const;
 
 export const northTutorial = [
-  ["North Chose East-As-North", "North selected the East version for this hand. The same four players and their running scores continue into North. East moves counterclockwise once more, so you are now South."],
-  ["East-as-North", "The rulebook lets East choose whether North uses East, South, or West rules. This playable table uses East-as-North: use the familiar East hand patterns of four three-tile groups and one Pair."],
+  ["North chose East-as-North", "The rulebook lets North choose East, South or West rules. This table uses East-as-North: build the familiar East patterns of four three-tile groups and one Pair."],
   ["North scoring", "East-as-North keeps the East Mahjong award. Flowers and Seasons still move to the bonus area and receive replacements, but they do not add separate North Round score awards."],
 ] as const;
 
@@ -58,13 +50,12 @@ export const TOUR_META: Record<RoundKey, StepMeta[]> = {
     { compass: true, card: RIGHT },
     { card: RIGHT },
     { targets: ["wall"], card: RIGHT },
-    { targets: ["rail"], card: RIGHT },
     { card: RIGHT },
     { targets: ["scores"], card: RIGHT },
     { targets: ["act", "drawn"], card: RIGHT },
   ],
-  south: [{ card: RIGHT }, { targets: ["act"], card: RIGHT }, { targets: ["act"], card: RIGHT }, { targets: ["scores"], card: RIGHT }],
-  west: [{ card: RIGHT }, { targets: ["rail"], card: RIGHT }, { targets: ["act"], card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }, { card: RIGHT }],
+  south: [{ targets: ["act"], card: RIGHT }, { targets: ["act"], card: RIGHT }, { targets: ["scores"], card: RIGHT }],
+  west: [{ targets: ["act"], card: RIGHT }, { targets: ["rail"], card: RIGHT }, { card: RIGHT }, { card: RIGHT }],
   north: [{ card: RIGHT }, { card: RIGHT }, { targets: ["scores"], card: RIGHT }],
 };
 
@@ -88,7 +79,7 @@ export function EastVisual({ step }: { step: number }) {
       </div>
     );
   }
-  if (step === 4) {
+  if (step === 3) {
     const items: [string, string[], string][] = [
       ["Pung", ["b6", "b6", "b6"], "Three identical tiles."],
       ["Pure Chow", ["d4", "d5", "d6"], "Three in a row, one suit."],
@@ -134,9 +125,9 @@ export function SouthCardKey({ card }: { card: SouthCard }) {
 
 export function SouthVisual({ step, card }: { step: number; card?: SouthCard }) {
   const flow = (parts: string[]) => <div className="lesson vis"><div className="flow">{parts.map((p, i) => <span key={i}>{i > 0 ? "→ " : ""}{p}</span>)}</div></div>;
-  if (step === 1) return flow(["1 · Right", "2 · Across", "3 · Left"]);
-  if (step === 2) return flow(["Left player's discard", "100 to the pot", "Your hand"]);
-  if (step === 3) return flow(["Card score", "East doubles", "Pot to winner"]);
+  if (step === 0) return flow(["1 · Right", "2 · Across", "3 · Left"]);
+  if (step === 1) return flow(["Left player's discard", "100 to the pot", "Your hand"]);
+  if (step === 2) return flow(["Card score", "East doubles", "Pot to winner"]);
   return null;
 }
 
