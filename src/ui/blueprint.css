@@ -85,7 +85,7 @@ button{font:inherit;cursor:pointer}
 #rail{left:40px;top:660px;width:1280px;height:166px;background:var(--ink);border-radius:10px;z-index:8}
 #rail .rh{position:absolute;left:20px;right:20px;top:12px;display:flex;justify-content:space-between;color:rgba(243,234,210,.6)}
 #rail .rh b{color:var(--chalk);font-weight:500}
-#rail .rack{position:absolute;left:0;right:0;top:40px;display:flex;justify-content:center;align-items:flex-start;gap:0}
+#rail .rack{position:absolute;left:0;right:0;top:54px;display:flex;justify-content:center;align-items:flex-start;gap:0}
 .hc{position:relative;flex:none;transition:transform .2s;margin-right:2px;cursor:default}
 .hc.click{cursor:pointer}
 .hc.click:hover{transform:translateY(-6px)}
@@ -141,7 +141,7 @@ button{font:inherit;cursor:pointer}
 .screen h1{margin:14px 0 0;font:800 118px/.9 var(--display);letter-spacing:-.03em}
 .screen h1 em{font-style:normal;color:var(--chalk)}
 .screen .lede{margin:22px 0 0;max-width:600px;font:400 14px/1.7 var(--mono);color:rgba(243,234,210,.88)}
-.screen .stats{display:flex;gap:14px;margin-top:30px}
+.screen .stats{display:flex;gap:14px;margin-top:34px}
 .screen .stat{border-left:2px solid var(--chalk);padding-left:12px}
 .screen .stat b{display:block;font:800 34px/1 var(--display)}
 .screen .stat span{font:500 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:rgba(243,234,210,.7)}
@@ -183,3 +183,14 @@ button{font:inherit;cursor:pointer}
 .modal .modal-scores strong{font:800 20px var(--display)}
 @media (prefers-reduced-motion:reduce){.hc{transition:none}}
 .tour-scores .sn{z-index:65}.tour-scores .sn .sc{color:var(--chalk);font-weight:500;font-size:1.3em}
+
+/* explain my hand: grouped rack + chalk */
+.bl{transition:filter .25s,opacity .25s}
+.coach-on .bl{filter:blur(2.5px) brightness(.8)}
+.rg .cap.need{color:var(--chalk)}
+.ghb{border:2px dashed rgba(255,255,255,.45);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--chalk);font:800 calc(var(--w,58px)*.34)/1 var(--display)}
+.ghb small{font:500 9px var(--mono);letter-spacing:.06em;margin-top:4px;text-transform:uppercase}
+.hc.ghost{margin-left:2px}
+#chalk{left:0;top:0;width:1360px;height:850px;pointer-events:none;z-index:10}
+#chalk path{fill:none;stroke:var(--chalk);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.cline{display:block;margin:0 0 6px}

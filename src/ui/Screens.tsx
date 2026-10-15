@@ -25,9 +25,7 @@ export function Welcome({ onBegin, error }: { onBegin: () => void; error?: strin
   ];
   return (
     <div className="screen" data-screen="welcome">
-      <div className="eb m"><i /><span>Learn by playing</span></div>
-      <h1>Mahjong<br /><em>Coach.</em></h1>
-      <p className="lede">A four-player tile game, taught while you play. We introduce the 144-tile set, build the table, and coach every move across four directional rounds: East, South, West, then North.</p>
+      <h1>Mahjong<br /><em>Coach</em></h1>
       <div className="stats">
         {[["108", "Numbered tiles"], ["16", "Winds"], ["12", "Dragons"], ["4", "Flowers"], ["4", "Seasons"]].map(([n, l]) => <div className="stat" key={l}><b>{n}</b><span>{l}</span></div>)}
       </div>

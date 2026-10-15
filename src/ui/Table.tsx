@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import type { EastRoundState, Meld } from "../game/state";
 import { SEATS, createTileSet, type Seat, type Tile } from "../game/tiles";
+import type { HandGroup } from "./groups";
 import { BpBack, BpTile, tileKey } from "./Tile";
 
 const allTiles = new Map(createTileSet().map((tile) => [tile.id, tile]));
@@ -68,9 +69,11 @@ type TableProps = {
   chips?: Record<string, string>;
   chipSel?: string;
   jokerRank?: number;
+  /** When set (Explain my hand), the rack is drawn as labelled groups instead of one row. */
+  groups?: HandGroup[];
 };
 
-export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds, drawnId, onTile, chips, chipSel }: TableProps) {
+export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds, drawnId, onTile, chips, chipSel, groups }: TableProps) {
   const ponds = pondsOf(game);
   const lastId = game.lastDiscard?.tile.id;
   const turnSeat = game.status === "active" ? game.turn : undefined;
@@ -86,7 +89,7 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
   const label = (pos: Exclude<Pos, "east">, style: CSSProperties, extra = "") => {
     const s = seatAt(game, pos);
     return (
-      <div className={`ab sn m ${turnSeat === s ? "turn" : ""} ${extra}`} style={style} data-tour="scores">
+      <div className={`ab bl sn m ${turnSeat === s ? "turn" : ""} ${extra}`} style={style} data-tour="scores">
         <b>{cap(s)}</b> · <span className="sc">{game.players[s].score.toLocaleString()}</span>
       </div>
     );
@@ -97,7 +100,7 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
     const units = p.hand.length + p.melds.reduce((n, m) => n + m.tiles.length, 0) + p.bonusTiles.length;
     const ow = units > 17 ? 21 : units > 15 ? 23 : 26;
     return (
-      <div className="ab" style={frame(SEAT_FRAME[pos])}>
+      <div className="ab bl" style={frame(SEAT_FRAME[pos])}>
         <div className="seat" data-seat={pos}>
           {p.hand.map((t) => <span key={t.id} style={{ marginRight: 1, display: "block" }}><BpBack w={ow} /></span>)}
           {p.melds.map((m, i) => <Meldrow key={i} meld={m} w={ow} />)}
@@ -111,7 +114,7 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
     const tiles = ponds[pos];
     const w = tiles.length > 18 ? 30 : 36;
     return (
-      <div className="ab" style={frame(POND_FRAME[pos])} data-pond={pos}>
+      <div className={`ab ${pos === "east" ? "" : "bl"}`} style={frame(POND_FRAME[pos])} data-pond={pos}>
         <div className="pond">{tiles.map((t) => <BpTile key={t.id} tile={t} w={w} className={t.id === lastId ? "last" : ""} />)}</div>
       </div>
     );
@@ -122,8 +125,9 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
   const hand = [...me.hand].sort((a, b) => tileOrder(a) - tileOrder(b));
   const shown = drawnId ? [...hand.filter((t) => t.id !== drawnId), ...hand.filter((t) => t.id === drawnId)] : hand;
   const meldCount = me.melds.reduce((n, m) => n + m.tiles.length, 0);
-  const total = shown.length + meldCount + me.bonusTiles.length;
-  const gaps = (me.melds.length + (me.bonusTiles.length ? 1 : 0)) * 24 + (drawnId ? 14 : 0);
+  const ghostCount = groups ? groups.filter((g) => g.kind === "need").length : 0;
+  const total = shown.length + meldCount + me.bonusTiles.length + ghostCount;
+  const gaps = (me.melds.length + (me.bonusTiles.length ? 1 : 0) + (groups ? groups.length : 0)) * 24 + (drawnId && !groups ? 14 : 0);
   const tw = Math.max(34, Math.min(58, Math.floor((1230 - gaps) / Math.max(1, total) - 2)));
   const cell = (t: Tile, interactive: boolean, extra = "") => {
     const lifted = t.id === selectedId || selectedIds?.includes(t.id);
@@ -139,14 +143,14 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
 
   return (
     <>
-      <div className="ab" id="box" data-tour="box" />
+      <div className="ab bl" id="box" data-tour="box" />
       {label("west", { left: 0, right: 0, top: 106, textAlign: "center" })}
       {label("north", { left: 120, top: 375, transform: "translate(-50%,-50%) rotate(-90deg)" })}
       {label("south", { left: 1240, top: 375, transform: "translate(-50%,-50%) rotate(90deg)" })}
       {opponent("west")}{opponent("north")}{opponent("south")}
       {pond("west")}{pond("north")}{pond("south")}{pond("east")}
 
-      <div className="ab wallc" data-tour="wall">
+      <div className="ab bl wallc" data-tour="wall">
         <div className="cap">Draw wall · {game.drawPile.length}</div>
         <div className="row">{Array.from({ length: Math.min(9, Math.ceil(game.drawPile.length / 7)) }, (_, i) => <BpBack key={i} w={22} />)}</div>
         <div className="cap" data-tour="flowers">Flower wall · {game.flowerWall.length}</div>
@@ -159,7 +163,18 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
           <span>● = copies you&apos;ve seen, of 4</span>
         </div>
         <div className="rack">
-          {shown.map((t) => cell(t, true, t.id === drawnId ? "drawn" : ""))}
+          {groups
+            ? groups.map((g, i) => (
+                <div className="rg" key={i}>
+                  <span className={`cap ${g.kind === "need" ? "need" : ""}`}>{g.label}</span>
+                  {g.tiles.map((t) => cell(t, false))}
+                  {g.kind === "need" && g.needs && (() => {
+                    const left = g.needs.reduce((n, k) => n + Math.max(0, 4 - (seenCount.get(k) ?? 0)), 0);
+                    return <div className="hc ghost" data-ghost><div className="ghb" style={{ width: tw, height: tw * 1.34 }}>{g.needs.map((k) => k.slice(1)).join("/")}<small>{left} left</small></div></div>;
+                  })()}
+                </div>
+              ))
+            : shown.map((t) => cell(t, true, t.id === drawnId ? "drawn" : ""))}
           {me.melds.map((m, i) => (
             <div className="rg" key={i}>
               <span className="cap">{kindName(m.kind)}</span>

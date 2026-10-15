@@ -14,6 +14,8 @@ import { createTileSet, tileLabel as rawTileLabel, type Seat, type Tile } from "
 import { Stage } from "../ui/Stage";
 import { TableBoard } from "../ui/Table";
 import { BpTile } from "../ui/Tile";
+import { ChalkArrow } from "../ui/Chalk";
+import { groupHand, suitWord } from "../ui/groups";
 import { EastVisual, SouthCardKey, SouthVisual, TOUR_META, TourOverlay, northTutorialFor, southTutorial, tutorial, westTutorial, type RoundKey } from "../ui/Lessons";
 import { FinalResults, Modal, RoundSetup, Welcome } from "../ui/Screens";
 
@@ -154,6 +156,12 @@ function latestTableCommentary(game: EastRoundState): string | undefined {
   if (event.type === "declaredMahjong") return `${name(event.seat, humanSeat)} declared Mahjong${event.source === "discard" ? " using a discarded tile" : " after drawing"}.`;
   if (event.type === "replacedBonus") return `${name(event.seat, humanSeat)} placed ${tile ? tileLabel(tile) : "a Flower or Season"} in the bonus area.`;
   return undefined;
+}
+
+/** First sentence only, trimmed to a length that fits the chalk panel. */
+function brief(text: string, max = 100): string {
+  const first = text.split(/(?<=[.!?])\s+/)[0].replace(/\s+—.*$/, "");
+  return first.length <= max ? first : `${first.slice(0, max).replace(/\s+\S*$/, "")}…`;
 }
 
 function CoachText({ text }: { text: string }) {
@@ -525,7 +533,13 @@ export default function HomePage() {
     setSelected(id);
   };
   const showBest = () => { const options = bestMoveOptions(game, humanSeat); setBestIdx(0); setCoachOpen(true); setMoveOptions(options); if (game.phase === "charleston" && options.length === 3) { setCharlestonSelection(options.map((option) => option.tileId)); setSelected(options[0].tileId); } };
-  const section = (title: string, items: string[]) => items.length > 0 ? <><span className="mn">{title}</span>{items.map((item) => <p key={item}><CoachText text={item} /></p>)}</> : null;
+  const westLike = game.round === "west" || (game.round === "north" && game.north?.format === "west");
+  const eastLike = game.round === "east" || !game.round || (game.round === "north" && game.north?.format === "east");
+  const groups = explainMode && isPlaying ? groupHand(tableGame.players[humanSeat].hand, { chows: !westLike }) : undefined;
+  const needGroup = groups?.find((g) => g.kind === "need");
+  const setCount = (groups?.filter((g) => g.kind === "set").length ?? 0) + player.melds.length;
+  const hasPair = !!groups?.some((g) => g.kind === "pair");
+  const looseCount = groups?.find((g) => g.kind === "loose")?.tiles.length ?? 0;
 
   // ---- actions ----
   const turnNow = game.status === "active" && game.turn === humanSeat;
@@ -563,7 +577,7 @@ export default function HomePage() {
   const goOn = game.round === "east" ? continueToSouth : game.round === "south" ? continueToWest : game.round === "west" ? continueToNorth : () => setRound("match-summary");
 
   return (
-    <Stage className={tourScores ? "tour-scores" : ""}>
+    <Stage className={`${tourScores ? "tour-scores" : ""} ${coachOpen && isPlaying ? "coach-on" : ""}`}>
       <div className="ab" id="hdr"><div className="eb m"><i /><span>{eyebrow}</span></div><h1>{headline}</h1></div>
       {isPlaying && <div className="ab" id="com">{commentary}</div>}
       <div className="ab" id="tools">
@@ -578,33 +592,35 @@ export default function HomePage() {
         </div>
       </div>
 
-      <TableBoard game={game} tableGame={tableGame} humanSeat={humanSeat} selectedId={selected} selectedIds={game.phase === "charleston" ? charlestonSelection : undefined} drawnId={drawnId} onTile={isPlaying ? onTile : undefined} chips={chips} chipSel={bestMode ? moveOptions[bestIndex]?.tileId : undefined} />
+      <TableBoard game={game} tableGame={tableGame} humanSeat={humanSeat} selectedId={selected} selectedIds={game.phase === "charleston" ? charlestonSelection : undefined} drawnId={drawnId} onTile={isPlaying ? onTile : undefined} chips={chips} chipSel={bestMode ? moveOptions[bestIndex]?.tileId : undefined} groups={groups} />
       {tourScores && <div className="ab sn m" style={{ left: 52, top: 668, zIndex: 65, background: "var(--ink)", padding: "3px 8px" }}><b>{cap(humanSeat)}</b> · <span className="sc">{player.score.toLocaleString()}</span></div>}
 
       {isPlaying && <div className="ab" id="act" data-tour="act">{act}</div>}
       {isPlaying && error && <div className="err">{error}</div>}
 
       {coachOpen && isPlaying && (
-        <div className="ab" id="chalkp">
-          <button type="button" className="x" onClick={() => setCoachOpen(false)} aria-label="Close coach">×</button>
-          {bestMode ? <>
-            <h3>Best move</h3>
-            <div className="tabs">{moveOptions.map((option, index) => <button key={option.tileId} type="button" className={index === bestIndex ? "sel" : ""} onClick={() => { setBestIdx(index); setSelected(option.tileId); }}>{index === 0 ? "★ " : ""}{index + 1}</button>)}</div>
-            <p><CoachText text={moveOptions[bestIndex].title} /></p>
-            <span className="mn">Why</span><p><CoachText text={moveOptions[bestIndex].reason} /></p>
-            <span className="mn">Keep</span><p><CoachText text={moveOptions[bestIndex].preserves} /></p>
-            <span className="mn">Look for</span><p><CoachText text={`${moveOptions[bestIndex].lookingFor}${moveOptions[bestIndex].tableWatch ? ` ${moveOptions[bestIndex].tableWatch}` : ""}`} /></p>
-          </> : <>
-            <h3>Your hand right now</h3>
-            <p><CoachText text={summary.overview} /></p>
-            <span className="mn">Progress</span><p><CoachText text={summary.progress} /></p>
-            {section("Already built", summary.built)}
-            {section("Developing", summary.developing)}
-            {section("Scoring", summary.scoring)}
-            {section("Weak right now", summary.weak)}
-            <span className="mn">What to focus on</span><p><CoachText text={summary.focus} /></p>
-          </>}
-        </div>
+        <>
+          <ChalkArrow target={bestMode ? `[data-tile="${moveOptions[bestIndex]?.tileId}"]` : needGroup ? "[data-ghost]" : "#none"} watch={`${bestMode}-${bestIndex}-${groups?.length}`} />
+          <div className="ab" id="chalkp">
+            <button type="button" className="x" onClick={() => setCoachOpen(false)} aria-label="Close coach">×</button>
+            {bestMode ? <>
+              <h3>Best move</h3>
+              <div className="tabs">{moveOptions.map((option, index) => <button key={option.tileId} type="button" className={index === bestIndex ? "sel" : ""} onClick={() => { setBestIdx(index); setSelected(option.tileId); }}>{index === 0 ? "★ " : ""}{index + 1}</button>)}</div>
+              <p><CoachText text={moveOptions[bestIndex].title} /></p>
+              <p className="cline"><CoachText text={brief(moveOptions[bestIndex].reason, 110)} /></p>
+            </> : <>
+              <h3>Your hand</h3>
+              {eastLike ? <>
+                <p className="cline">{setCount} of 4 sets built. {hasPair ? "Pair ✓" : "Still need a pair."}</p>
+                {needGroup?.needs && <p className="cline">A {needGroup.needs.map((k) => k.slice(1)).join(" or ")} of {suitWord(needGroup.needs[0][0])} finishes your Chow.</p>}
+                {looseCount > 0 && <p className="cline">{looseCount} loose {looseCount === 1 ? "tile is" : "tiles are"} not helping yet.</p>}
+              </> : <>
+                <p className="cline"><CoachText text={brief(summary.progress, 110)} /></p>
+                <p className="cline"><CoachText text={brief(summary.focus, 110)} /></p>
+              </>}
+            </>}
+          </div>
+        </>
       )}
 
       {!isPlaying && (
