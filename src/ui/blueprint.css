@@ -196,3 +196,10 @@ button{font:inherit;cursor:pointer}
 .cline{display:block;margin:0 0 6px}
 #chalkp{font-size:20px}
 #chalkp .cline>b{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:rgba(243,234,210,.8)}
+#tools .jump{align-items:center;gap:14px}
+#tools .jump .m{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;opacity:.65}
+#tools .lnk.on{color:var(--yellow,#f6d84a);border-bottom-color:currentColor}
+.jumpfix{left:40px;top:34px;z-index:80;display:flex;gap:14px;align-items:center}
+.jumpfix .m{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;opacity:.65}
+.jumpfix .lnk{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--cream);}
+.jumpfix .lnk.on{color:var(--yellow,#f6d84a)}
