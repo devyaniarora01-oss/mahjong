@@ -6,7 +6,6 @@ import type { SouthCard } from "../game/south-cards";
 import { Keys } from "./Tile";
 
 export const tutorial = [
-  ["Welcome to Mahjong", "You are joining a four-player tile game. Mahjong is played through directional rounds; each round begins with a different direction and can have its own rules. Your goal is to make a valid 14-tile Mahjong hand before anyone else."],
   ["This is the East Round", "This game begins with the East Round. You are East at the bottom; South is on your right, West faces you, and North is on your left. East takes the first turn, begins with one extra tile, and therefore discards first."],
   ["The 144 tiles", "The full set has 108 numbered tiles, 16 Winds, 12 Dragons, and 8 bonus tiles. Bamboo, Characters, Dots, Winds, and Dragons build your hand. Flowers and Seasons go to the bonus area and are replaced from the Flower Wall."],
   ["Building the table and Flower Wall", "The 144 tiles are shuffled. East rolls and doubles the result to create the Flower Wall. Everyone receives 13 tiles; East receives one extra and starts with 14. Flowers, Seasons, and Kongs take replacement tiles from the Flower Wall. Everything else becomes the Draw Wall."],
@@ -57,7 +56,6 @@ const RIGHT = { x: 960, y: 150 };
 
 export const TOUR_META: Record<RoundKey, StepMeta[]> = {
   east: [
-    { targets: ["box"], card: RIGHT },
     { compass: true, card: { x: 960, y: 130 } },
     { card: RIGHT },
     { targets: ["wall"], card: RIGHT },
@@ -81,7 +79,7 @@ function Cell({ title, children, note }: { title: string; children: ReactNode; n
 }
 
 export function EastVisual({ step }: { step: number }) {
-  if (step === 2) {
+  if (step === 1) {
     return (
       <div className="lesson g4 vis">
         <Cell title="Numbered suits"><Keys keys={keys("b1", "c1", "d1")} /></Cell>
@@ -91,7 +89,7 @@ export function EastVisual({ step }: { step: number }) {
       </div>
     );
   }
-  if (step === 5) {
+  if (step === 4) {
     const items: [string, string[], string][] = [
       ["Pung", ["b6", "b6", "b6"], "Three identical tiles."],
       ["Pure Chow", ["d4", "d5", "d6"], "Three in a row, one suit."],
