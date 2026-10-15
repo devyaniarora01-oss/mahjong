@@ -164,6 +164,19 @@ function brief(text: string, max = 100): string {
   return first.length <= max ? first : `${first.slice(0, max).replace(/\s+\S*$/, "")}…`;
 }
 
+/** Whole sentences only, never cut mid-sentence. */
+function sents(text: string, n: number): string {
+  return text.split(/(?<=[.!?])\s+/).slice(0, n).join(" ");
+}
+
+/** Presentation-only correction: Winds/Dragons can't be Chows, but they can be Pungs. */
+function honourFix(text: string, label: string, copies: number): string {
+  if (!/cannot make a Pure Chow because Winds and Dragons/.test(text)) return text;
+  const need = Math.max(0, 3 - copies);
+  const fixed = `${label} can only become a Pung, and you hold ${copies === 1 ? "just 1" : copies}. It needs ${need} more ${need === 1 ? "copy" : "copies"}, so it is far from useful.`;
+  return text.replace(/\S[^.]*cannot make a Pure Chow because Winds and Dragons[^.]*\.(\s+You have no matching[^.]*\.)?/, fixed);
+}
+
 function CoachText({ text }: { text: string }) {
   const reference = /(?:\d(?:–\d){0,2}\s(?:Bamboo|Character|Dot)|(?:East|South|West|North)\sWind|(?:Red|Green|White)\sDragon)/g;
   const tileFor = (value: string): Tile[] => {
@@ -514,7 +527,7 @@ export default function HomePage() {
     : myTurn ? (game.phase === "draw" ? "Pick a tile." : "Discard a tile.")
     : game.phase === "claim" ? "Any claims?"
     : `${cap(game.turn)}'s turn.`;
-  const eyebrow = !isPlaying ? "Learn Mahjong" : `Current action · ${roundTitle} round · Wall ${game.drawPile.length}`;
+  const eyebrow = !isPlaying ? "Learn Mahjong" : `${roundTitle} round`;
   const sentences = (game.phase === "charleston"
     ? `Charleston ${charlestonStep + 1} of 3: pass ${charlestonStep === 0 ? "right" : charlestonStep === 1 ? "across" : "left"}. Choose three tiles.`
     : game.phase === "claim" && latestCommentary ? latestCommentary : activity).split(/(?<=[.!?])\s+/);
@@ -607,17 +620,31 @@ export default function HomePage() {
               <h3>Best move</h3>
               <div className="tabs">{moveOptions.map((option, index) => <button key={option.tileId} type="button" className={index === bestIndex ? "sel" : ""} onClick={() => { setBestIdx(index); setSelected(option.tileId); }}>{index === 0 ? "★ " : ""}{index + 1}</button>)}</div>
               <p><CoachText text={moveOptions[bestIndex].title} /></p>
-              <p className="cline"><CoachText text={brief(moveOptions[bestIndex].reason, 110)} /></p>
+              {(() => {
+                const o = moveOptions[bestIndex];
+                const base = o.tileId.replace(/-\d+$/, "");
+                const copies = player.hand.filter((t) => t.id.replace(/-\d+$/, "") === base).length;
+                const label = o.title.replace(/^(Discard|Pass)\s+/i, "").replace(/[.:].*$/, "");
+                return <>
+                  <p className="cline"><b>Why · </b><CoachText text={sents(honourFix(o.reason, label, copies), 2)} /></p>
+                  {o.preserves && <p className="cline"><b>Keep · </b><CoachText text={sents(o.preserves, 1)} /></p>}
+                  {o.lookingFor && <p className="cline"><b>Look for · </b><CoachText text={sents(o.lookingFor, 1)} /></p>}
+                </>;
+              })()}
             </> : <>
               <h3>Your hand</h3>
-              {eastLike ? <>
-                <p className="cline">{setCount} of 4 sets built. {hasPair ? "Pair ✓" : "Still need a pair."}</p>
-                {needGroup?.needs && <p className="cline">A {needGroup.needs.map((k) => k.slice(1)).join(" or ")} of {suitWord(needGroup.needs[0][0])} finishes your Chow.</p>}
-                {looseCount > 0 && <p className="cline">{looseCount} loose {looseCount === 1 ? "tile is" : "tiles are"} not helping yet.</p>}
-              </> : <>
-                <p className="cline"><CoachText text={brief(summary.progress, 110)} /></p>
-                <p className="cline"><CoachText text={brief(summary.focus, 110)} /></p>
-              </>}
+              <p className="cline"><b>{setCount} of 4 sets built · {hasPair ? "Pair ✓" : "No pair yet"}</b></p>
+              {(() => {
+                const oneHonour = (w: string) => /(Wind|Dragon)/.test(w) ? w.replace(/ — .*$/, "") + " — only 1 copy. It can only become a Pung, which needs two more." : w;
+                const trim = (i: string) => i.replace(/ — a developing Pure Chow; draw (.*?) to complete it\.?$/, " → needs $1").replace(/ — (two|three|four) (identical|consecutive)[^.]*\.?$/, "").replace(/ — it is not currently in a pair.*$/, " — not part of a set yet");
+                const row = (label: string, items: string[], n: number) => items.length > 0 && <p className="cline"><b>{label} · </b><CoachText text={items.slice(0, n).map(trim).join(" · ")} /></p>;
+                return <>
+                  {row("Built", summary.built, 3)}
+                  {row("Developing", summary.developing, 2)}
+                  {row("Weak", summary.weak.map(oneHonour), 2)}
+                  <p className="cline"><b>Focus · </b><CoachText text={summary.focus} /></p>
+                </>;
+              })()}
             </>}
           </div>
         </>

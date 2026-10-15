@@ -194,3 +194,5 @@ button{font:inherit;cursor:pointer}
 #chalk{left:0;top:0;width:1360px;height:850px;pointer-events:none;z-index:10}
 #chalk path{fill:none;stroke:var(--chalk);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .cline{display:block;margin:0 0 6px}
+#chalkp{font-size:20px}
+#chalkp .cline>b{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:rgba(243,234,210,.8)}
