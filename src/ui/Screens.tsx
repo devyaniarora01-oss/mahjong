@@ -30,9 +30,15 @@ export function Welcome({ onBegin, error }: { onBegin: () => void; error?: strin
       <div className="doors" aria-hidden="false">
         {DOORS.map((d, i) => (
           <div key={d.n} className={`door ${i === 0 ? "open" : "locked"}`}>
-            <div className="dn m">{d.n}</div>
-            <p className="dd">{d.d}</p>
-            {i === 0 ? <button type="button" className="btn pri" onClick={onBegin}>Begin</button> : <div className="lk m">⌀ Opens after {d.after}</div>}
+            <div className="dn m">{i === 0 ? "01 — East Round" : d.n}</div>
+            {i === 0 ? (
+              <div className="eo">
+                <h2>Four sets and a pair</h2>
+                <p>Make a 14-tile hand: four sets of three tiles, plus one pair.</p>
+                <div className="tl"><Keys keys={["b6", "b6", "b6"]} w={30} /><Keys keys={["d4", "d5", "d6"]} w={30} /><Keys keys={["c2", "c2"]} w={30} /></div>
+                <button type="button" className="btn pri" onClick={onBegin}>Begin</button>
+              </div>
+            ) : <><p className="dd">{d.d}</p><div className="lk m">⌀ Opens after {d.after}</div></>}
             <div className="dg" aria-hidden="true">{d.glyph}</div>
           </div>
         ))}
@@ -54,7 +60,7 @@ export function ScoreRow({ scores, you }: { scores: Record<string, number>; you?
 
 /** Between-rounds screen: the four doors again — finished rounds dim, this one open, the rest locked. */
 export function RoundSetup(props: {
-  round: "east" | "south" | "west" | "north";
+  round: "south" | "west" | "north";
   scores: Record<string, number>;
   you?: string;
   intro: string;
@@ -67,7 +73,7 @@ export function RoundSetup(props: {
   error?: string;
 }) {
   const { round, scores, you, intro, kicker, heading, body, southCard, cta, onStart, error } = props;
-  const now = round === "east" ? 0 : round === "south" ? 1 : round === "west" ? 2 : 3;
+  const now = round === "south" ? 1 : round === "west" ? 2 : 3;
   return (
     <div className="screen trans" data-screen={`${round}-setup`}>
       <div className="doors">
@@ -84,7 +90,6 @@ export function RoundSetup(props: {
                   <div className="kick">{kicker}</div>
                   <h2>{heading}</h2>
                   {southCard && <><div className="goal">{southCard.goal}</div><div className="pts m">{southCard.score.toLocaleString()} points{southCard.bonus ? ` · ${southCard.bonus}` : ""}</div><SouthCardKey card={southCard} /></>}
-                  {round === "east" && <div className="tl"><Keys keys={["b6", "b6", "b6"]} w={34} /><Keys keys={["d4", "d5", "d6"]} w={34} /><Keys keys={["c2", "c2"]} w={34} /></div>}
                   {round === "west" && <div className="tl"><Keys keys={["b7", "b7", "b7"]} w={34} /><Keys keys={["G", "G", "G", "G"]} w={34} /><Keys keys={["R", "R"]} w={34} /></div>}
                   {round === "north" && <div className="chips"><span>East-as-North</span><span>South-as-North</span><span>West-as-North</span></div>}
                   <p>{body}</p>
