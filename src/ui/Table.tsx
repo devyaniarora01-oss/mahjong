@@ -153,14 +153,14 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
   const total = shown.length + meldCount + me.bonusTiles.length + ghostCount;
   const gaps = (me.melds.length + (me.bonusTiles.length ? 1 : 0) + (groups ? groups.length : 0)) * 24 + (drawnId && !groups ? 14 : 0);
   const tw = Math.max(34, Math.min(58, Math.floor((1230 - gaps) / Math.max(1, total) - 2)));
-  const cell = (t: Tile, interactive: boolean, extra = "") => {
+  const cell = (t: Tile, interactive: boolean, extra = "", showPips = interactive) => {
     const lifted = t.id === selectedId || selectedIds?.includes(t.id);
     const chip = chips?.[t.id];
     return (
       <div key={t.id} className={`hc ${interactive && onTile ? "click" : ""} ${lifted ? "lift" : ""} ${extra}`} onClick={interactive && onTile ? () => onTile(t.id) : undefined} data-tile={t.id} data-tour={extra.includes("drawn") ? "drawn" : undefined}>
         {chip && <div className={`chipb ${chipSel === t.id ? "sel" : ""}`}>{chip}</div>}
         <BpTile tile={t} w={tw} />
-        {interactive && <div className="pips">{pips(t)}</div>}
+        {showPips && <div className="pips">{pips(t)}</div>}
       </div>
     );
   };
@@ -191,7 +191,7 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
             ? groups.map((g, i) => (
                 <div className="rg" key={i}>
                   <span className={`cap ${g.kind === "need" ? "need" : ""}`}>{g.label}</span>
-                  {g.tiles.map((t) => cell(t, false))}
+                  {g.tiles.map((t) => cell(t, false, "", true))}
                   {g.kind === "need" && g.needs && (() => {
                     const left = g.needs.reduce((n, k) => n + Math.max(0, 4 - (seenCount.get(k) ?? 0)), 0);
                     return <div className="hc ghost" data-ghost><div className="ghb" style={{ width: tw, height: tw * 1.34 }}>{g.needs.map((k) => k.slice(1)).join("/")}<small>{left} left</small></div></div>;
@@ -202,7 +202,7 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
           {me.melds.map((m, i) => (
             <div className="rg" key={i}>
               <span className="cap">{kindName(m.kind)}</span>
-              {m.tiles.map((t) => cell(t, false))}
+              {m.tiles.map((t) => cell(t, false, "", true))}
             </div>
           ))}
           {me.bonusTiles.length > 0 && <><div className="rdiv" /><div className="rg" style={{ marginLeft: 22 }}>{me.bonusTiles.map((t) => cell(t, false))}</div></>}
