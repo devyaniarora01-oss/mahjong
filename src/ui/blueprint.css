@@ -347,3 +347,6 @@ button{font:inherit;cursor:pointer}
 .callout[data-pos="north"]{left:300px;top:400px}.callout[data-pos="south"]{left:1060px;top:400px}
 @keyframes callpop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}14%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}26%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
 @media (prefers-reduced-motion:reduce){.callout{animation:none}}
+
+/* game review headings */
+.modal .rv{color:var(--chalk)}

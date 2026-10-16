@@ -111,22 +111,8 @@ function reviewFeedback(game: EastRoundState, decisions: readonly DecisionNote[]
         : humanBonuses
           ? `You correctly moved ${humanBonuses} Flower/Season ${humanBonuses === 1 ? "tile" : "tiles"} to the bonus area and kept your hand at the right size.`
           : `You completed ${humanDiscards} turn${humanDiscards === 1 ? "" : "s"} while keeping the table moving.`;
-  const next = isSouthCardRound && southProgress
-    ? alternatives[0]
-      ? `For ${southProgress.card.title}, revisit the decision to discard ${alternatives[0].discarded}: the Coach ranked ${alternatives[0].recommended} higher because ${alternatives[0].reason ?? "it matched your card more directly"}`
-      : southProgress.pieces.length
-        ? `On the next ${southProgress.card.title} hand, preserve the ${southProgress.pieces.join(" and ")} you already started, then discard tiles that do not appear to serve that card.`
-        : `On the next ${southProgress.card.title} hand, compare every tile directly with: ${southProgress.card.goal}`
-    : alternatives[0]
-    ? `At one decision, you discarded ${alternatives[0].discarded} while the Coach ranked ${alternatives[0].recommended} higher. ${alternatives[0].reason ?? "Compare those two tiles before making the same choice next hand."}`
-    : summary.weak[0]
-    ? `On the next hand, reconsider ${summary.weak[0].split(" — ")[0]}. ${summary.weak[0].split(" — ").slice(1).join(" — ")}`
-    : summary.developing[0]
-      ? `On the next hand, protect ${summary.developing[0].split(" — ")[0]}; it already has a clear path toward a supported group.`
-        : decisions.length
-          ? `You had ${decisions.length} recorded discard decision${decisions.length === 1 ? "" : "s"}. On the next hand, compare the Coach’s first option with your own choice before discarding.`
-          : "No human discard decisions were recorded before this hand ended.";
-  return { happened, didWell, next };
+  const cardNote = isSouthCardRound && southProgress && (game.winner?.seat === humanSeat || southProgress.pieces.length) ? didWell : undefined;
+  return { happened, cardNote };
 }
 
 function scoreReviewLines(settlement: EastRoundSettlement, humanSeat: Seat) {
@@ -134,14 +120,17 @@ function scoreReviewLines(settlement: EastRoundSettlement, humanSeat: Seat) {
   for (const transfer of settlement.transfers) {
     grouped.set(transfer.reason, [...(grouped.get(transfer.reason) ?? []), transfer]);
   }
-  return [...grouped.entries()].map(([reason, transfers]) => {
+  const lines = [...grouped.entries()].map(([reason, transfers]) => {
     const pot = transfers.find((transfer) => transfer.from === transfer.to);
     if (pot) return `${reason}: ${pot.amount.toLocaleString()} points were collected through discard buys. ${name(pot.to, humanSeat)} won the hand and receives the full pot.`;
     const recipient = transfers[0]?.to;
     const paid = transfers.map((transfer) => `${name(transfer.from, humanSeat)} −${transfer.amount.toLocaleString()}`).join(" · ");
     const received = transfers.reduce((total, transfer) => total + transfer.amount, 0);
-    return `${reason}: ${paid} → ${recipient ? `${name(recipient, humanSeat)} +${received.toLocaleString()}` : "no score change"}.`;
+    const prefix = reason === "Mahjong" ? "" : `${reason}: `;
+    return `${prefix}${paid} → ${recipient ? `${name(recipient, humanSeat)} +${received.toLocaleString()}` : "no score change"}.`;
   });
+  if (settlement.transfers.some((transfer) => transfer.amount > 0 && (transfer.from === "east" || transfer.to === "east") && transfer.from !== transfer.to)) lines.push("East pays double, and collects double, on every payment.");
+  return lines;
 }
 function latestTableCommentary(game: EastRoundState): string | undefined {
   const event = game.history.at(-1);
@@ -749,12 +738,10 @@ export default function HomePage() {
 
       {game.status !== "active" && review && (
         <Modal label="Game review">
-          <div className="kick">Game review</div>
-          <h2>{game.status === "mahjong" ? `${name(game.winner!.seat, humanSeat)} declared Mahjong` : "The hand ended in a draw"}</h2>
+          <h2 className="rv">{game.status === "mahjong" ? `${name(game.winner!.seat, humanSeat)} declared Mahjong` : "The hand ended in a draw"}</h2>
           <p>{review.happened}</p>
-          {settlement && <><h3>Score summary</h3>{settlement.transfers.length ? scoreReviewLines(settlement, humanSeat).map((line) => <p key={line}>{line}</p>) : <p>No score was awarded for this draw.</p>}<div className="modal-scores">{seats.map((seat) => <div key={seat}><b>{name(seat, humanSeat)}</b><strong>{game.players[seat].score.toLocaleString()}</strong></div>)}</div></>}
-          <h3>What you did well</h3><p>{review.didWell}</p>
-          <h3>Try next time</h3><p>{review.next}</p>
+          {settlement && <><h3 className="rv">Score summary</h3>{settlement.transfers.length ? scoreReviewLines(settlement, humanSeat).map((line) => <p key={line}>{line}</p>) : <p>No score was awarded for this draw.</p>}<div className="modal-scores">{seats.map((seat) => <div key={seat}><b>{name(seat, humanSeat)}</b><strong>{game.players[seat].score.toLocaleString()}</strong></div>)}</div></>}
+          {review.cardNote && <><h3 className="rv">Your South Card</h3><p>{review.cardNote}</p></>}
           <div className="actions"><button type="button" className="btn" onClick={redo}>Redo {roundTitle} Round</button><button type="button" className="btn pri" onClick={goOn}>{continueLabel}</button></div>
         </Modal>
       )}
