@@ -121,7 +121,8 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
 
   const opponent = (pos: Exclude<Pos, "east">) => {
     const p = game.players[seatAt(game, pos)];
-    const units = p.hand.length + p.melds.reduce((n, m) => n + m.tiles.length, 0) + p.bonusTiles.length;
+    // Size the hand as if the freshly drawn tile were not there, so tiles never shrink and regrow each turn.
+    const units = p.hand.length - (p.hand.length % 3 === 2 ? 1 : 0) + p.melds.reduce((n, m) => n + m.tiles.length, 0) + p.bonusTiles.length;
     const ow = units > 17 ? 21 : units > 15 ? 23 : 26;
     return (
       <div className={`ab bl ${pos === "north" ? "pinL" : pos === "south" ? "pinR" : ""}`} style={frame(SEAT_FRAME[pos])}>
@@ -150,8 +151,9 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
   const shown = drawnId ? [...hand.filter((t) => t.id !== drawnId), ...hand.filter((t) => t.id === drawnId)] : hand;
   const meldCount = me.melds.reduce((n, m) => n + m.tiles.length, 0);
   const ghostCount = groups ? groups.filter((g) => g.kind === "need").length : 0;
-  const total = shown.length + meldCount + me.bonusTiles.length + ghostCount;
-  const gaps = (me.melds.length + (me.bonusTiles.length ? 1 : 0) + (groups ? groups.length : 0)) * 24 + (drawnId && !groups ? 14 : 0);
+  const settledHand = shown.length - (shown.length % 3 === 2 ? 1 : 0); // ignore the drawn tile so sizes stay steady
+  const total = settledHand + meldCount + me.bonusTiles.length + ghostCount;
+  const gaps = (me.melds.length + (me.bonusTiles.length ? 1 : 0) + (groups ? groups.length : 0)) * 24 + (!groups ? 14 : 0);
   const tw = Math.max(34, Math.min(58, Math.floor((1230 - gaps) / Math.max(1, total) - 2)));
   const cell = (t: Tile, interactive: boolean, extra = "", showPips = interactive) => {
     const lifted = t.id === selectedId || selectedIds?.includes(t.id);
