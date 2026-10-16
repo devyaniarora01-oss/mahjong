@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { applyBotAction, chooseBotCharlestonTileIds, chooseBotClaimAction, chooseBotTurnAction } from "../game/bots";
 import { analyseHand, bestMoveOptions, explainHand, handSummary, type CoachingOption } from "../game/coaching";
 import { canClaimExposedKong, canClaimPung, canClaimPureChow, canDeclareConcealedKong, canDeclareMahjong, canReplaceNorthExposedJoker, claimExposedKong, claimPung, claimPureChow, declareConcealedKong, declareMahjong, discard, drawFromPile, passClaims, replaceNorthExposedJoker, type EastRoundState } from "../game/state";
@@ -19,6 +19,7 @@ import { groupHand, suitWord, type HandGroup } from "../ui/groups";
 import { keyLabel, southPlan } from "../game/south-plan";
 import { EastVisual, SouthCardKey, SouthVisual, TOUR_META, TourOverlay, northTutorialFor, southTutorial, tutorial, westTutorial, type RoundKey } from "../ui/Lessons";
 import { FinalResults, Modal, RoundSetup, Welcome } from "../ui/Screens";
+import { isSoundOn, playCall, playTile, setSoundOn, unlockAudio } from "../ui/sound";
 
 const HUMAN: Seat = "east";
 const seats: Seat[] = ["north", "west", "south", "east"];
@@ -205,6 +206,10 @@ export default function HomePage() {
   /** The Learn Mahjong tour only opens when the player asks for it. */
   const NO_TOUR = 9999;
   const [setupStep, setSetupStep] = useState(NO_TOUR);
+  const [soundOn, setSoundState] = useState(true);
+  const heardEvents = useRef(0);
+  const heardGame = useRef<unknown>(undefined);
+  const toggleSound = () => { const next = !soundOn; setSoundOn(next); setSoundState(next); if (next) { unlockAudio(); playTile("draw"); } };
   const [selected, setSelected] = useState<string>();
   const [coach, setCoach] = useState("");
   const [moveOptions, setMoveOptions] = useState<CoachingOption[]>([]);
@@ -216,6 +221,25 @@ export default function HomePage() {
   const [flowerReveal, setFlowerReveal] = useState<FlowerReplacementReveal>();
   const [openingBonusIds, setOpeningBonusIds] = useState<string[]>([]);
   const [openingBonusShown, setOpeningBonusShown] = useState(0);
+  useEffect(() => { setSoundState(isSoundOn()); }, []);
+  // Table sounds come from the game history, so human and bot moves sound the same.
+  const historyLength = game?.history.length ?? 0;
+  useEffect(() => {
+    if (!game) { heardEvents.current = 0; heardGame.current = undefined; return; }
+    // A new hand starts a new history: skip its opening events instead of replaying them as sound.
+    if (heardGame.current !== game.history[0]) { heardGame.current = game.history[0]; heardEvents.current = historyLength; return; }
+    const fresh = game.history.slice(heardEvents.current);
+    heardEvents.current = historyLength;
+    fresh.forEach((event) => {
+      if (event.type === "discarded") playTile("discard");
+      else if (event.type === "drew" && event.source === "drawPile") playTile("draw");
+      else if (event.type === "claimedPung") { playTile("claim"); playCall("pung", event.seat); }
+      else if (event.type === "claimedPureChow") { playTile("claim"); playCall("chow", event.seat); }
+      else if (event.type === "claimedKong" || event.type === "declaredKong") { playTile("claim"); playCall("kong", event.seat); }
+      else if (event.type === "declaredMahjong") playCall("mahjong", event.seat);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyLength, game?.round]);
   useEffect(() => {
     setHasSeenTutorial(window.localStorage.getItem("mahjong-coach-onboarding") === "complete");
   }, []);
@@ -224,7 +248,7 @@ export default function HomePage() {
     const timer = window.setTimeout(() => setFlowerReveal(undefined), 6_000);
     return () => window.clearTimeout(timer);
   }, [flowerReveal]);
-  const begin = () => { try { const next = startBrowserEastRound(); setRound("east"); setSouthCard(undefined); setDecisionNotes([]); setFlowerReveal(undefined); setOpeningBonusIds(next.players.east.bonusTiles.map((tile) => tile.id)); setOpeningBonusShown(0); setGame(next); setSetupStep(NO_TOUR); setSelected(undefined); setCoach("Coach tip: you are East, so you begin with 14 tiles and discard first."); setMoveOptions([]); setCoachOpen(false); setActivity("Your 14 normal hand tiles are ready. Any Flowers or Seasons from the deal will appear beside your hand next."); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not start a new hand."); } };
+  const begin = () => { unlockAudio(); try { const next = startBrowserEastRound(); setRound("east"); setSouthCard(undefined); setDecisionNotes([]); setFlowerReveal(undefined); setOpeningBonusIds(next.players.east.bonusTiles.map((tile) => tile.id)); setOpeningBonusShown(0); setGame(next); setSetupStep(NO_TOUR); setSelected(undefined); setCoach("Coach tip: you are East, so you begin with 14 tiles and discard first."); setMoveOptions([]); setCoachOpen(false); setActivity("Your 14 normal hand tiles are ready. Any Flowers or Seasons from the deal will appear beside your hand next."); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not start a new hand."); } };
   const play = () => { const currentTutorial = game?.round === "south" ? southTutorial : game?.round === "west" ? westTutorial : game?.round === "north" ? northTutorialFor(game.north!.format, game.north!.jokerRank) : tutorial; window.localStorage.setItem("mahjong-coach-onboarding", "complete"); setHasSeenTutorial(true); setSetupStep(currentTutorial.length); setCoachOpen(false); setMoveOptions([]); setCoach(explainHand(game!, humanSeatOf(game!), true)); setActivity(game?.round === "south" ? "South Round: compare your tiles to your secret South Card as you play." : game?.round === "west" ? "West Round begins with Charleston. Pass three tiles, then build only Pungs, Kongs, and one Pair." : game?.round === "north" && game.north?.format === "south" ? "South-as-North begins with Charleston. Follow your South Card; Flowers and Seasons are concealed jokers, and buying is not allowed." : game?.round === "north" && game.north?.format === "west" ? `West-as-North begins with Charleston. ${game.north.jokerRank}s are jokers; build only West Pungs, Kongs, and a Pair.` : game?.round === "north" ? "North Round uses the East-as-North format. South begins with 14 tiles and discards first." : "Your turn — choose a tile in your hand, then discard it. East begins with 14 tiles."); };
   const continueToSouth = () => {
     const cards = dealSouthCards(Math.random);
@@ -629,6 +653,7 @@ export default function HomePage() {
         </div>
         <div className="row">
           {isSouthCardRound && <button type="button" className="lnk" data-tour="southcard" onClick={() => { setCoachOpen(false); setSouthCardOpen((open) => !open); }}>Your South Card</button>}
+          <button type="button" className="lnk" onClick={toggleSound} aria-pressed={soundOn}>Sound: {soundOn ? "On" : "Off"}</button>
           <button type="button" className="lnk" onClick={() => setSetupStep(0)}>Learn Mahjong</button>
           <button type="button" className="lnk" onClick={begin}>New game</button>
         </div>
