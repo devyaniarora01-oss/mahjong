@@ -61,7 +61,7 @@ function flowerReplacementAfter(before: EastRoundState, after: EastRoundState): 
   const replacement = newEvents.slice(bonusIndex + 1).find((event) => event.type === "drew" && event.seat === bonus.seat && event.source === "flowerWall");
   return { seat: bonus.seat, bonusTileId: bonus.tileId, replacementTileId: replacement?.type === "drew" ? replacement.tileId : undefined };
 }
-type DecisionNote = { discarded: string; recommended?: string; reason?: string };
+type DecisionNote = { discarded: string; recommended?: string; reason?: string; /** The Coach clearly preferred another discard (the chosen tile was not among its close alternatives). */ clearMiss?: boolean; recommendedReason?: string };
 
 function southCardProgress(game: EastRoundState, seat: Seat) {
   const card = game.south!.cards[seat];
@@ -92,45 +92,49 @@ function reviewFeedback(game: EastRoundState, decisions: readonly DecisionNote[]
       : `${name(game.winner!.seat, humanSeat)} completed Mahjong before you did.`
     : "Neither player completed Mahjong before the Draw Pile or Flower Wall ran out, so this hand ended as a draw.";
   const completed = summary.built.length ? ` Your final hand showed: ${summary.built.map((item) => item.split(" — ")[0]).join("; ")}.` : "";
-  const followed = decisions.filter((decision) => decision.recommended === decision.discarded);
-  const alternatives = decisions.filter((decision) => decision.recommended && decision.recommended !== decision.discarded);
   const isSouthCardRound = (game.round === "south" || (game.round === "north" && game.north?.format === "south")) && !!game.south;
   const southProgress = isSouthCardRound ? southCardProgress(game, humanSeat) : undefined;
-  const didWell = isSouthCardRound
-    ? game.winner?.seat === humanSeat
-      ? `You completed your ${southProgress!.card.title} South Card: ${southProgress!.card.goal}${followed.length ? ` You also followed the Coach’s top card-focused recommendation on ${followed.length} discard${followed.length === 1 ? "" : "s"}.` : ""}`
-      : southProgress!.pieces.length
-        ? `You finished with ${southProgress!.pieces.join(" and ")} that relate to your ${southProgress!.card.title} card. ${followed.length ? `You also protected the Coach’s top card-focused choice on ${followed.length} discard${followed.length === 1 ? "" : "s"}.` : ""}`
-        : `You kept each decision tied to your ${southProgress!.card.title} objective rather than treating this as an East Round hand.${followed.length ? ` You followed the Coach’s top card-focused choice on ${followed.length} discard${followed.length === 1 ? "" : "s"}.` : ""}`
-    : game.winner?.seat === humanSeat
-    ? `You completed a ${game.round === "south" ? "South" : game.round === "west" ? "West" : game.round === "north" ? "North" : "East"} Round Mahjong hand.${completed}${followed.length ? ` You also chose the Coach’s top visible-hand recommendation on ${followed.length} discard${followed.length === 1 ? "" : "s"}.` : ""}`
-    : humanClaims.length
-      ? `You declared ${humanClaims.length} exposed ${humanClaims.length === 1 ? "set" : "sets"} after using a discard from another player.`
-      : humanKongs
-        ? `You declared ${humanKongs} Kong${humanKongs === 1 ? "" : "s"} and took the required Flower Wall replacement.`
-        : humanBonuses
-          ? `You correctly moved ${humanBonuses} Flower/Season ${humanBonuses === 1 ? "tile" : "tiles"} to the bonus area and kept your hand at the right size.`
-          : `You completed ${humanDiscards} turn${humanDiscards === 1 ? "" : "s"} while keeping the table moving.`;
-  const cardNote = isSouthCardRound && southProgress && (game.winner?.seat === humanSeat || southProgress.pieces.length) ? didWell : undefined;
-  return { happened, cardNote };
+  const followed = decisions.filter((decision) => decision.recommended === decision.discarded);
+  const clearMiss = decisions.find((decision) => decision.clearMiss && decision.recommended);
+  const won = game.winner?.seat === humanSeat;
+
+  // What you did well: only things that were actually true of this hand, never filler.
+  const claimDetails = humanClaims.map((event) => {
+    const tile = "tileId" in event && event.tileId ? allTilesById.get(event.tileId) : undefined;
+    return tile ? `${tileLabel(tile)} for a ${event.type === "claimedPung" ? "Pung" : "Chow"}` : undefined;
+  }).filter(Boolean) as string[];
+  const wellParts: string[] = [];
+  if (southProgress && (won || southProgress.pieces.length)) wellParts.push(won ? `You completed your ${southProgress.card.title} card: ${southProgress.card.goal}` : `You finished with ${southProgress.pieces.join(" and ")} toward your ${southProgress.card.title} card.`);
+  else if (!isSouthCardRound && summary.built.length) wellParts.push(`${won ? "You won with" : "You finished with"} ${summary.built.map((item) => item.split(" — ")[0]).join("; ")}.`);
+  if (claimDetails.length) wellParts.push(`You turned other players' discards into sets by claiming ${claimDetails.join(", ")}.`);
+  if (decisions.length >= 3 && followed.length / decisions.length >= 0.6) wellParts.push(`You matched the Coach's top discard on ${followed.length} of ${decisions.length} turns.`);
+  const didWell = wellParts.length ? wellParts.join(" ") : undefined;
+
+  // Try next time: only a clear miss (the Coach saw a clearly better discard), never a coin-flip between equal tiles.
+  const next = clearMiss
+    ? `You discarded ${clearMiss.discarded}, but ${clearMiss.recommended} was the clearer tile to give up. ${clearMiss.recommendedReason ?? ""}`.trim()
+    : undefined;
+  return { happened, didWell, next };
 }
 
 function scoreReviewLines(settlement: EastRoundSettlement, humanSeat: Seat) {
   const grouped = new Map<string, typeof settlement.transfers>();
-  for (const transfer of settlement.transfers) {
-    grouped.set(transfer.reason, [...(grouped.get(transfer.reason) ?? []), transfer]);
-  }
-  const lines = [...grouped.entries()].map(([reason, transfers]) => {
+  for (const transfer of settlement.transfers) grouped.set(transfer.reason, [...(grouped.get(transfer.reason) ?? []), transfer]);
+  const money = (n: number) => n.toLocaleString();
+  return [...grouped.entries()].map(([rawReason, transfers]) => {
     const pot = transfers.find((transfer) => transfer.from === transfer.to);
-    if (pot) return `${reason}: ${pot.amount.toLocaleString()} points were collected through discard buys. ${name(pot.to, humanSeat)} won the hand and receives the full pot.`;
-    const recipient = transfers[0]?.to;
-    const paid = transfers.map((transfer) => `${name(transfer.from, humanSeat)} −${transfer.amount.toLocaleString()}`).join(" · ");
-    const received = transfers.reduce((total, transfer) => total + transfer.amount, 0);
-    const prefix = reason === "Mahjong" ? "" : `${reason}: `;
-    return `${prefix}${paid} → ${recipient ? `${name(recipient, humanSeat)} +${received.toLocaleString()}` : "no score change"}.`;
+    if (pot) return `Buy pot: ${money(pot.amount)} points were paid in by buying discards during play. ${name(pot.to, humanSeat)} won the hand, so ${name(pot.to, humanSeat)} takes all of it.`;
+    const reason = rawReason.replace(/^North (South|West) /, "$1 ");
+    const recipient = transfers[0]!.to;
+    const paid = transfers.map((transfer) => `${name(transfer.from, humanSeat)} −${money(transfer.amount)}`).join(" · ");
+    const total = transfers.reduce((sum, transfer) => sum + transfer.amount, 0);
+    // The listed value is what an ordinary player pays; East's share is doubled both ways.
+    const base = recipient === "east" ? transfers[0]!.amount / 2 : Math.min(...transfers.map((transfer) => transfer.amount));
+    const eastNote = recipient === "east" ? " East collects double, so every player pays twice the base amount."
+      : transfers.some((transfer) => transfer.from === "east") ? ` East always pays double: ${money(base * 2)} instead of ${money(base)}.` : "";
+    const lead = reason === "Mahjong" ? "Worth" : `${reason} is worth`;
+    return `${lead} ${money(base)} from each player. ${paid} → ${name(recipient, humanSeat)} +${money(total)}.${eastNote}`;
   });
-  if (settlement.transfers.some((transfer) => transfer.amount > 0 && (transfer.from === "east" || transfer.to === "east") && transfer.from !== transfer.to)) lines.push("East pays double, and collects double, on every payment.");
-  return lines;
 }
 function latestTableCommentary(game: EastRoundState): string | undefined {
   const event = game.history.at(-1);
@@ -424,7 +428,7 @@ export default function HomePage() {
       setError(cause instanceof Error ? cause.message : "North Round could not start. Please try again.");
     }
   };
-  const commit = (fn: (state: EastRoundState) => EastRoundState, message: string) => setGame((current) => { if (!current) return current; try { setError(""); const humanSeat = humanSeatOf(current); const next = fn(current); const event = next.history.at(-1); if (event?.type === "discarded" && event.seat === humanSeat) { const options = bestMoveOptions(current, humanSeat); const chosen = options.find((option) => option.tileId === event.tileId); setDecisionNotes((notes) => [...notes, { discarded: tileLabel(current.players[humanSeat].hand.find((tile) => tile.id === event.tileId)!), recommended: options[0] ? options[0].title.replace(/^(Discard|Pass) /, "") : undefined, reason: chosen?.reason }]); } setFlowerReveal(flowerReplacementAfter(current, next)); setActivity(activityAfterFlowerWall(current, next, message)); return next; } catch (cause) { setError(cause instanceof Error ? cause.message : "That action is not legal now."); return current; } });
+  const commit = (fn: (state: EastRoundState) => EastRoundState, message: string) => setGame((current) => { if (!current) return current; try { setError(""); const humanSeat = humanSeatOf(current); const next = fn(current); const event = next.history.at(-1); if (event?.type === "discarded" && event.seat === humanSeat) { const options = bestMoveOptions(current, humanSeat); const chosen = options.find((option) => option.tileId === event.tileId); setDecisionNotes((notes) => [...notes, { discarded: tileLabel(current.players[humanSeat].hand.find((tile) => tile.id === event.tileId)!), recommended: options[0] ? options[0].title.replace(/^(Discard|Pass) /, "") : undefined, reason: chosen?.reason, clearMiss: !!options[0] && !chosen, recommendedReason: options[0]?.reason }]); } setFlowerReveal(flowerReplacementAfter(current, next)); setActivity(activityAfterFlowerWall(current, next, message)); return next; } catch (cause) { setError(cause instanceof Error ? cause.message : "That action is not legal now."); return current; } });
   const toggleCharlestonTile = (tileId: string) => { setSelected(tileId); setCharlestonSelection((picked) => picked.includes(tileId) ? picked.filter((id) => id !== tileId) : picked.length < 3 ? [...picked, tileId] : picked); };
   const completeCharlestonStep = () => commit((state) => {
     const humanSeat = humanSeatOf(state);
@@ -741,7 +745,8 @@ export default function HomePage() {
           <h2 className="rv">{game.status === "mahjong" ? `${name(game.winner!.seat, humanSeat)} declared Mahjong` : "The hand ended in a draw"}</h2>
           <p>{review.happened}</p>
           {settlement && <><h3 className="rv">Score summary</h3>{settlement.transfers.length ? scoreReviewLines(settlement, humanSeat).map((line) => <p key={line}>{line}</p>) : <p>No score was awarded for this draw.</p>}<div className="modal-scores">{seats.map((seat) => <div key={seat}><b>{name(seat, humanSeat)}</b><strong>{game.players[seat].score.toLocaleString()}</strong></div>)}</div></>}
-          {review.cardNote && <><h3 className="rv">Your South Card</h3><p>{review.cardNote}</p></>}
+          {review.didWell && <><h3 className="rv">What you did well</h3><p>{review.didWell}</p></>}
+          {review.next && <><h3 className="rv">Try next time</h3><p>{review.next}</p></>}
           <div className="actions"><button type="button" className="btn" onClick={redo}>Redo {roundTitle} Round</button><button type="button" className="btn pri" onClick={goOn}>{continueLabel}</button></div>
         </Modal>
       )}
