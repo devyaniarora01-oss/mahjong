@@ -520,11 +520,12 @@ export default function HomePage() {
   if (round === "north-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="north" scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise one final time. You are now South, while your place at the table stays the same. Scores carry forward from West." kicker="North's format choice" heading="North will decide this hand" body="North can choose East-as-North, South-as-North, or West-as-North under the rulebook. Start the round to reveal North's selection and the rules it creates for this hand." cta="Start" onStart={startNorthRound} /></Stage>;
   if (round === "match-summary") {
     const humanSeat = humanSeatOf(game);
-    const standings = [...seats].sort((left, right) => game.players[right].score - game.players[left].score);
-    const topScore = game.players[standings[0]].score;
-    const leaders = standings.filter((seat) => game.players[seat].score === topScore);
-    const winnerText = leaders.length > 1 ? `${leaders.map((seat) => name(seat, humanSeat)).join(" and ")} share the match lead.` : leaders[0] === humanSeat ? "You win the four-round game." : `${name(leaders[0], humanSeat)} wins the four-round game.`;
-    return <Stage><FinalResults standings={standings.map((seat) => ({ name: name(seat, humanSeat), score: game.players[seat].score }))} winner={winnerText} onNew={begin} /></Stage>;
+    const topScore = Math.max(...seats.map((seat) => game.players[seat].score));
+    const leaders = seats.filter((seat) => game.players[seat].score === topScore);
+    const title = (seat: Seat) => seat === humanSeat ? "You" : seat[0].toUpperCase() + seat.slice(1);
+    const headline = leaders.length > 1 ? "It's a tie!" : leaders[0] === humanSeat ? "You win!" : `${title(leaders[0])} wins!`;
+    const finalSeats = seats.map((seat) => ({ pos: game.players[seat].physicalSeat, wind: seat, you: seat === humanSeat, score: game.players[seat].score, win: leaders.includes(seat) }));
+    return <Stage><FinalResults seats={finalSeats} headline={headline} onNew={begin} /></Stage>;
   }
 
   const humanSeat = humanSeatOf(game);

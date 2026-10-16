@@ -108,16 +108,25 @@ export function RoundSetup(props: {
   );
 }
 
-export function FinalResults({ standings, winner, onNew }: { standings: { name: string; score: number }[]; winner: string; onNew: () => void }) {
+export type FinalSeat = { pos: "east" | "south" | "west" | "north"; wind: "east" | "south" | "west" | "north"; you: boolean; score: number; win: boolean };
+const GLYPH = { east: "東", south: "南", west: "西", north: "北" } as const;
+/** Chairs never move: you sit at the bottom, so the players who were East and West at the start face each other. */
+const CHAIR = { east: "cb", west: "ct", north: "cl", south: "cr" } as const;
+
+export function FinalResults({ seats, headline, onNew }: { seats: FinalSeat[]; headline: string; onNew: () => void }) {
+  const [lead, ...rest] = headline.split(" ");
   return (
-    <div className="screen" data-screen="final">
-      <div className="eb m"><i /><span>Four rounds complete</span></div>
-      <h1 style={{ fontSize: 96 }}>Final <em>results.</em></h1>
-      <p className="lede" style={{ color: "var(--chalk)" }}>{winner}</p>
-      <div className="panel" style={{ maxWidth: 560, padding: "10px 20px 20px" }}>
-        <div className="standings">{standings.map((s, i) => <div key={s.name}><b>#{i + 1}</b><span>{s.name}</span><small>{s.score.toLocaleString()}</small></div>)}</div>
+    <div className="screen final" data-screen="final">
+      <div className="ftable">
+        <div className="fctr"><h1>{lead}<br /><em>{rest.join(" ")}</em></h1></div>
+        {seats.map((s) => (
+          <div key={s.pos} className={`fseat ${CHAIR[s.pos]} ${s.win ? "w" : ""}`} data-seat={s.pos}>
+            <div className="ftl">{GLYPH[s.wind]}</div>
+            <div><div className="fnm">{s.you ? "You" : s.wind[0].toUpperCase() + s.wind.slice(1)}</div><div className="fsc">{s.score.toLocaleString()}</div></div>
+          </div>
+        ))}
       </div>
-      <div className="cta" style={{ marginTop: 26 }}><button type="button" className="btn pri" onClick={onNew}>New game</button></div>
+      <button type="button" className="btn pri fnew" onClick={onNew}>New game</button>
     </div>
   );
 }

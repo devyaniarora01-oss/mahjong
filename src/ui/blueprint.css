@@ -325,3 +325,17 @@ button{font:inherit;cursor:pointer}
 .screen.welcome .door .dg{bottom:-150px}
 .veil{background:transparent;-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
 .veil{left:calc(var(--dx,0px)*-1);right:calc(var(--dx,0px)*-1)}
+
+/* ---------- final results: the table ---------- */
+.final{position:absolute;inset:0}
+.ftable{position:absolute;left:50%;top:50%;width:600px;height:600px;margin:-300px 0 0 -300px;border:1.5px solid var(--cream);border-radius:10px;background:#0b4636;box-shadow:inset 0 0 0 14px var(--felt),inset 0 0 0 15px rgba(243,234,210,.28)}
+.fctr{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center}
+.fctr h1{margin:0;font:800 112px/.92 var(--display);letter-spacing:-.045em;color:var(--cream)}.fctr h1 em{font-style:normal;color:var(--chalk)}
+.fseat{position:absolute;display:flex;align-items:center;gap:16px;background:var(--felt);border:1.5px solid var(--cream);border-radius:8px;padding:14px 22px 14px 14px;color:var(--cream)}
+.fseat .ftl{width:56px;height:72px;border-radius:5px;background:var(--cream);color:var(--ink);box-shadow:0 5px 0 #b9ae8e;font:900 42px/72px 'Noto Serif SC','Songti SC',serif;text-align:center}
+.fseat .fnm{font:800 22px var(--display)}.fseat .fsc{font:800 34px var(--display)}
+.fseat.w{background:var(--chalk);border-color:var(--chalk);color:var(--ink)}.fseat.w .ftl{background:var(--ink);color:var(--chalk);box-shadow:0 5px 0 #000}
+.fseat.ct{left:50%;top:-36px;transform:translateX(-50%)}.fseat.cb{left:50%;bottom:-36px;transform:translateX(-50%)}
+.fseat.cl{left:-130px;top:50%;transform:translateY(-50%)}.fseat.cr{right:-130px;top:50%;transform:translateY(-50%)}
+.fseat.w.ct,.fseat.w.cb{transform:translateX(-50%) scale(1.1)}.fseat.w.cl,.fseat.w.cr{transform:translateY(-50%) scale(1.1)}
+.fnew{position:absolute;right:60px;bottom:50px}
