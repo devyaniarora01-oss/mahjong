@@ -60,6 +60,7 @@ export function ScoreRow({ scores, you }: { scores: Record<string, number>; you?
 /** Between-rounds screen: the four doors again — finished rounds dim, this one open, the rest locked. */
 export function RoundSetup(props: {
   round: "south" | "west" | "north";
+  northFormat?: "east" | "south" | "west";
   scores: Record<string, number>;
   you?: string;
   intro: string;
@@ -89,7 +90,7 @@ export function RoundSetup(props: {
                   <div className="kick">{kicker}</div>
                   <h2>{heading}</h2>
                   {southCard && <><div className="goal">{southCard.goal}</div><div className="pts m">{southCard.score.toLocaleString()} points{southCard.bonus ? ` · ${southCard.bonus}` : ""}</div><SouthCardKey card={southCard} /></>}
-                  {round === "north" && <div className="chips"><span>East-as-North</span><span>South-as-North</span><span>West-as-North</span></div>}
+                  {round === "north" && !props.northFormat && <div className="chips"><span>East-as-North</span><span>South-as-North</span><span>West-as-North</span></div>}
                   <p>{body}</p>
                   <button type="button" className="btn pri" onClick={onStart}>{cta}</button>
                   <div className="tsc">

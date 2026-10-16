@@ -97,7 +97,7 @@ export function playTile(kind: "discard" | "draw" | "claim") {
   void playClip(`/audio/tiles/${kind}.mp3`).then((played) => {
     if (played) return;
     if (kind === "discard") synthClack(0.9);
-    else if (kind === "draw") synthClack(0.35);
+    else if (kind === "draw") { synthClack(0.75); synthClack(0.3, 0.07); }
     else { synthClack(0.9); synthClack(0.7, 0.11); }
   });
 }

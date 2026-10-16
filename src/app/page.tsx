@@ -219,24 +219,31 @@ export default function HomePage() {
   const [activity, setActivity] = useState("Press Start Game to sit at the East Round table.");
   const [error, setError] = useState("");
   const [flowerReveal, setFlowerReveal] = useState<FlowerReplacementReveal>();
+  const [northPick, setNorthPick] = useState<{ format: "east" | "south" | "west"; joker?: number }>();
+  const [callout, setCallout] = useState<{ word: string; pos: "east" | "south" | "west" | "north"; key: number }>();
   const [openingBonusIds, setOpeningBonusIds] = useState<string[]>([]);
   const [openingBonusShown, setOpeningBonusShown] = useState(0);
   useEffect(() => { setSoundState(isSoundOn()); }, []);
+  useEffect(() => {
+    if (round === "north-setup" && !northPick) { const format = chooseNorthFormat(); setNorthPick({ format, joker: format === "west" ? chooseNorthJokerRank() : undefined }); }
+  }, [round, northPick]);
+  useEffect(() => { if (!callout) return; const t = window.setTimeout(() => setCallout(undefined), 1500); return () => window.clearTimeout(t); }, [callout]);
   // Table sounds come from the game history, so human and bot moves sound the same.
   const historyLength = game?.history.length ?? 0;
   useEffect(() => {
     if (!game) { heardEvents.current = 0; heardGame.current = undefined; return; }
     // A new hand starts a new history: skip its opening events instead of replaying them as sound.
     if (heardGame.current !== game.history[0]) { heardGame.current = game.history[0]; heardEvents.current = historyLength; return; }
+    const showCall = (word: string, seat: Seat) => setCallout({ word, pos: game.players[seat].physicalSeat, key: Date.now() });
     const fresh = game.history.slice(heardEvents.current);
     heardEvents.current = historyLength;
     fresh.forEach((event) => {
       if (event.type === "discarded") playTile("discard");
       else if (event.type === "drew" && event.source === "drawPile") playTile("draw");
-      else if (event.type === "claimedPung") { playTile("claim"); playCall("pung", event.seat); }
-      else if (event.type === "claimedPureChow") { playTile("claim"); playCall("chow", event.seat); }
-      else if (event.type === "claimedKong" || event.type === "declaredKong") { playTile("claim"); playCall("kong", event.seat); }
-      else if (event.type === "declaredMahjong") playCall("mahjong", event.seat);
+      else if (event.type === "claimedPung") { playTile("claim"); playCall("pung", event.seat); showCall("Pung", event.seat); }
+      else if (event.type === "claimedPureChow") { playTile("claim"); playCall("chow", event.seat); showCall("Chow", event.seat); }
+      else if (event.type === "claimedKong" || event.type === "declaredKong") { playTile("claim"); playCall("kong", event.seat); showCall("Kong", event.seat); }
+      else if (event.type === "declaredMahjong") { playCall("mahjong", event.seat); showCall("Mahjong", event.seat); }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyLength, game?.round]);
@@ -418,10 +425,11 @@ export default function HomePage() {
       const previousHumanSeat = previousSeatForCurrent[humanSeatOf(game)];
       const previousPhysicalSeats = Object.fromEntries(seats.map((seat) => [previousSeatForCurrent[seat], game.players[seat].physicalSeat])) as Record<Seat, Seat>;
       const scores = Object.fromEntries(seats.map((seat) => [previousSeatForCurrent[seat], game.players[seat].score])) as Record<Seat, number>;
-      const selectedFormat = chooseNorthFormat();
-      const selectedJokerRank = selectedFormat === "west" ? chooseNorthJokerRank() : undefined;
+      const selectedFormat = northPick?.format ?? chooseNorthFormat();
+      const selectedJokerRank = selectedFormat === "west" ? (northPick?.joker ?? chooseNorthJokerRank()) : undefined;
       const next = startBrowserNorthRound(scores, previousHumanSeat, previousPhysicalSeats, selectedFormat, selectedJokerRank, selectedFormat === "south" ? dealSouthCards(Math.random) : undefined);
       setGame(next);
+      setNorthPick(undefined);
       setRound("east");
       setSetupStep(NO_TOUR);
       setSelected(undefined);
@@ -517,7 +525,15 @@ export default function HomePage() {
   const scoresOf = (g: EastRoundState) => Object.fromEntries(seats.map((seat) => [seat, g.players[seat].score])) as Record<Seat, number>;
   if (round === "south-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="south" scores={scoresOf(game)} you={humanSeatOf(game)} intro="Scores carry forward and East moves counterclockwise, so you move from East to North. Your winning objective now comes from a private South Card." kicker="Your secret South Card" heading="Revealed when you start" body="Before play, you swap tiles with the other players: pass three you don't need and take three in return. Then you try to build the hand shown on your card." cta="Start" onStart={startSouthRound} error={error} /></Stage>;
   if (round === "west-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="west" scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise again. You are now West. Scores and players carry forward from South." kicker="West Round objective" heading="Pungs, Kongs, and one Pair" body="Build four sets of identical tiles, plus one pair. A set of three is a Pung and a set of four is a Kong; you need at least one Kong. Runs of consecutive tiles do not count in West." cta="Start" onStart={startWestRound} /></Stage>;
-  if (round === "north-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="north" scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise one final time. You are now South, while your place at the table stays the same. Scores carry forward from West." kicker="North's format choice" heading="North will decide this hand" body="North can choose East-as-North, South-as-North, or West-as-North under the rulebook. Start the round to reveal North's selection and the rules it creates for this hand." cta="Start" onStart={startNorthRound} /></Stage>;
+  if (round === "north-setup") {
+    const pick = northPick;
+    const fmt = pick?.format;
+    const heading = fmt ? `${fmt[0].toUpperCase()}${fmt.slice(1)}-as-North` : "Choosing North's format…";
+    const body = fmt === "east" ? "North is playing the East format. You are South this round and build the same kind of hand as in the East round: four sets of three tiles, plus one pair. Flowers and Seasons add no bonus points."
+      : fmt === "south" ? "North is playing the South format. After the Charleston swap, build the hand on your secret South Card. Flowers and Seasons count as concealed jokers, and you can't buy discards."
+      : fmt === "west" ? `North is playing the West format. After the Charleston swap, build Pungs, Kongs and one pair. Every ${pick?.joker} in Bamboo, Characters and Dots is a joker, and you can't buy discards.` : "";
+    return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="north" northFormat={fmt} scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise one final time. You are now South, while your place at the table stays the same. Scores carry forward from West." kicker="This round's format" heading={heading} body={body} cta="Start" onStart={startNorthRound} /></Stage>;
+  }
   if (round === "match-summary") {
     const humanSeat = humanSeatOf(game);
     const topScore = Math.max(...seats.map((seat) => game.players[seat].score));
@@ -563,7 +579,8 @@ export default function HomePage() {
     : myTurn ? (game.phase === "draw" ? "Pick a tile." : "Discard a tile.")
     : game.phase === "claim" ? "Any claims?"
     : `${cap(game.turn)}'s turn.`;
-  const eyebrow = !isPlaying ? "Learn Mahjong" : `${roundTitle} round`;
+  const northLabel = game.round === "north" && game.north ? ` · ${game.north.format[0].toUpperCase()}${game.north.format.slice(1)}-as-North${game.north.format === "west" ? ` (${game.north.jokerRank}s wild)` : ""}` : "";
+  const eyebrow = !isPlaying ? "Learn Mahjong" : `${roundTitle} round${northLabel}`;
   const sentences = (game.phase === "charleston"
     ? `Charleston ${charlestonStep + 1} of 3: pass ${charlestonStep === 0 ? "right" : charlestonStep === 1 ? "across" : "left"}. Choose three tiles.`
     : game.phase === "claim" && latestCommentary ? latestCommentary : activity).split(/(?<=[.!?])\s+/);
@@ -641,10 +658,12 @@ export default function HomePage() {
   const nextStep = () => (setupStep === activeTutorial.length - 1 ? play() : setSetupStep((step) => step + 1));
   const continueLabel = game.round === "east" ? "Continue to South Round" : game.round === "south" ? "Continue to West Round" : game.round === "west" ? "Continue to North Round" : "View final results";
   const redo = game.round === "east" ? begin : redoCurrentRound;
+  if (typeof window !== "undefined") (window as any).__call = (w: string, pos: "east"|"south"|"west"|"north") => setCallout({ word: w, pos, key: Date.now() }); // TMPHOOK
   const goOn = game.round === "east" ? continueToSouth : game.round === "south" ? continueToWest : game.round === "west" ? continueToNorth : () => setRound("match-summary");
 
   return (
     <Stage className={`${tourScores ? "tour-scores" : ""} ${coachOpen && isPlaying ? "coach-on" : ""}`}>
+      {callout && <div key={callout.key} className={`callout ${callout.word === "Mahjong" ? "big" : ""}`} data-pos={callout.pos}>{callout.word}!</div>}
       <div className="ab" id="hdr"><div className="eb m"><i /><span>{eyebrow}</span></div><h1>{headline.replace(/\.$/, "")}</h1></div>
       {isPlaying && <div className="ab" id="com">{commentary}</div>}
       <div className="ab" id="tools">
