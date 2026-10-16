@@ -22,7 +22,31 @@ export function setSoundOn(on: boolean) {
   if (!on && typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
 }
 
-/** Browsers only allow audio after a click, so call this from one. */
+let keepAlive: HTMLAudioElement | null = null;
+let keepAliveTrying = false;
+/** A silent looping <audio> makes iOS treat the page as "playback", so Web Audio is heard even with the ring/silent switch on. */
+function startKeepAlive() {
+  if (keepAlive || keepAliveTrying || typeof window === "undefined") return;
+  keepAliveTrying = true;
+  try {
+    const nav = navigator as Navigator & { audioSession?: { type: string } };
+    if (nav.audioSession) nav.audioSession.type = "playback";
+    const rate = 8000, samples = 800;
+    const bytes = new Uint8Array(44 + samples);
+    const view = new DataView(bytes.buffer);
+    const text = (at: number, value: string) => [...value].forEach((ch, i) => view.setUint8(at + i, ch.charCodeAt(0)));
+    text(0, "RIFF"); view.setUint32(4, 36 + samples, true); text(8, "WAVEfmt ");
+    view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+    view.setUint32(24, rate, true); view.setUint32(28, rate, true); view.setUint16(32, 1, true); view.setUint16(34, 8, true);
+    text(36, "data"); view.setUint32(40, samples, true);
+    bytes.fill(128, 44);
+    const el = new Audio(URL.createObjectURL(new Blob([bytes], { type: "audio/wav" })));
+    el.loop = true; el.volume = 0.01;
+    void el.play().then(() => { keepAlive = el; }).catch(() => { keepAliveTrying = false; /* needs another tap */ });
+  } catch { keepAliveTrying = false; /* unsupported */ }
+}
+
+/** Browsers only allow audio after a tap or click, so call this from one (it is also wired to the first touch below). */
 export function unlockAudio() {
   if (typeof window === "undefined") return;
   if (!ctx) {
@@ -33,8 +57,16 @@ export function unlockAudio() {
     master.gain.value = 0.9;
     master.connect(ctx.destination);
   }
-  if (ctx.state === "suspended") void ctx.resume();
+  if (ctx.state !== "running") void ctx.resume();
+  if (!keepAlive) startKeepAlive();
   CALL_CLIPS.forEach((url) => void loadClip(url)); // decode now so a call-out is instant when a bot claims
+}
+
+if (typeof window !== "undefined") {
+  // Phones only release audio from inside a real touch, so unlock on the first few touches anywhere and after returning to the tab.
+  const again = () => { if (enabled) unlockAudio(); };
+  ["touchend", "pointerup", "click", "keydown"].forEach((type) => window.addEventListener(type, again, { passive: true }));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && enabled) again(); });
 }
 
 // Clips play through the same Web Audio context as the clacks. A context that was unlocked by a click can play
@@ -69,6 +101,7 @@ const CALL_CLIPS = ["east", "south", "west", "north"].flatMap((seat) => ["pung",
 
 function synthClack(power: number, delay = 0) {
   if (!ctx || !master) return;
+  if (ctx.state !== "running") void ctx.resume();
   const t = ctx.currentTime + delay;
   const length = Math.floor(ctx.sampleRate * 0.05);
   const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
