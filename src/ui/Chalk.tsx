@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
+import { stageRect } from "./Stage";
 
 /** A hand-drawn chalk arrow from a fixed point on the felt to a tile or group in your rack. */
 export function ChalkArrow({ target, watch }: { target: string; watch: unknown }) {
@@ -10,11 +11,9 @@ export function ChalkArrow({ target, watch }: { target: string; watch: unknown }
       const stage = document.getElementById("stage");
       const el = document.querySelector(target) as HTMLElement | null;
       if (!stage || !el) { setD(""); return; }
-      const s = Number(stage.dataset.scale || 1);
-      const sr = stage.getBoundingClientRect();
-      const r = el.getBoundingClientRect();
-      const tx = (r.left - sr.left) / s + r.width / s / 2;
-      const ty = (r.top - sr.top) / s - 30;
+      const r = stageRect(el.getBoundingClientRect());
+      const tx = r.x + r.w / 2;
+      const ty = r.y - 30;
       const from = { x: tx - 38, y: ty - 44 };
       const cx = tx - 40;
       const cy = ty - 8;
@@ -41,17 +40,15 @@ export function DiscardArrow({ watch }: { watch: unknown }) {
       const from = document.getElementById("com");
       const el = document.querySelector("[data-pond] .last") as HTMLElement | null;
       if (!stage || !from || !el) { setD(""); return; }
-      const s = Number(stage.dataset.scale || 1);
-      const sr = stage.getBoundingClientRect();
-      const f = from.getBoundingClientRect();
-      const r = el.getBoundingClientRect();
-      const x1 = (f.left - sr.left) / s + 230;
-      const y1 = (f.bottom - sr.top) / s + 6;
-      const cxT = (r.left - sr.left) / s + r.width / s / 2;
-      const cyT = (r.top - sr.top) / s + r.height / s / 2;
+      const f = stageRect(from.getBoundingClientRect());
+      const r = stageRect(el.getBoundingClientRect());
+      const x1 = f.x + 230;
+      const y1 = f.y + f.h + 6;
+      const cxT = r.x + r.w / 2;
+      const cyT = r.y + r.h / 2;
       const dx0 = cxT - x1, dy0 = cyT - y1, len0 = Math.hypot(dx0, dy0) || 1;
-      const x2 = cxT - (dx0 / len0) * (r.width / s * 0.9 + 6);
-      const y2 = cyT - (dy0 / len0) * (r.height / s * 0.9 + 6);
+      const x2 = cxT - (dx0 / len0) * (r.w * 0.9 + 6);
+      const y2 = cyT - (dy0 / len0) * (r.h * 0.9 + 6);
       const k = -0.28, mx = (x1 + x2) / 2, my = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1;
       const cx = mx - dy * k, cy = my + dx * k;
       const a = Math.atan2(y2 - cy, x2 - cx);

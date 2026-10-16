@@ -350,3 +350,4 @@ button{font:inherit;cursor:pointer}
 
 /* game review headings */
 .modal .rv{color:var(--chalk)}
+html,body{touch-action:manipulation;overscroll-behavior:none}

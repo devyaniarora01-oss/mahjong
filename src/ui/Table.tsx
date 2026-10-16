@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, type CSSProperties } from "react";
+import { stageRect } from "./Stage";
 import type { EastRoundState, Meld } from "../game/state";
 import { SEATS, createTileSet, type Seat, type Tile } from "../game/tiles";
 import type { HandGroup } from "./groups";
@@ -81,8 +82,6 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
   const rects = useRef<Map<string, DOMRect>>(new Map());
   const lastKey = useRef(groupsKey);
   useLayoutEffect(() => {
-    const stage = document.getElementById("stage");
-    const scale = Number(stage?.dataset.scale || 1);
     const now = new Map<string, DOMRect>();
     document.querySelectorAll<HTMLElement>("#rail [data-tile]").forEach((el) => now.set(el.dataset.tile!, el.getBoundingClientRect()));
     if (lastKey.current !== groupsKey && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -90,8 +89,9 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
         const before = rects.current.get(el.dataset.tile!);
         const after = now.get(el.dataset.tile!)!;
         if (!before) return;
-        const dx = (before.left - after.left) / scale;
-        const dy = (before.top - after.top) / scale;
+        const b = stageRect(before), a = stageRect(after);
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
         if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
         el.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: "translate(0,0)" }], { duration: 650, delay: Math.min(i, 14) * 18, easing: "cubic-bezier(.3,.7,.2,1)", fill: "backwards" });
       });

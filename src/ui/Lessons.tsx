@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { stageRect } from "./Stage";
 import type { NorthFormat } from "../game/north";
 import type { SouthCard } from "../game/south-cards";
 import { Keys } from "./Tile";
@@ -140,14 +141,13 @@ function rectsFor(names: string[]): Rect[] {
   const stage = document.getElementById("stage");
   const board = document.getElementById("board");
   if (!stage || !board) return [];
-  const s = Number(stage.dataset.scale || 1);
-  const sr = board.getBoundingClientRect();
   const out: Rect[] = [];
   for (const name of names) {
     document.querySelectorAll(`[data-tour~="${name}"]`).forEach((el) => {
       const r = (el as HTMLElement).getBoundingClientRect();
       if (r.width === 0) return;
-      out.push({ x: (r.left - sr.left) / s - 8, y: (r.top - sr.top) / s - 8, w: r.width / s + 16, h: r.height / s + 16 });
+      const a = stageRect(r);
+      out.push({ x: a.x - 8, y: a.y - 8, w: a.w + 16, h: a.h + 16 });
     });
   }
   return out;
