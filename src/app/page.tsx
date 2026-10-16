@@ -370,14 +370,6 @@ export default function HomePage() {
   };
   const continueToWest = () => { if (game) westFrom(game); };
   const continueToNorth = () => { if (game) northFrom(game); };
-  /** Preview shortcut: jump straight to the start of any round on a fresh table. */
-  const jumpTo = (target: "east" | "south" | "west" | "north") => {
-    if (target === "east") { begin(); return; }
-    const base = startBrowserEastRound();
-    if (target === "south") { const cards = dealSouthCards(Math.random); setPreparedSouthCards(cards); setSouthCard(cards.north); setGame(base); setRound("south-setup"); setCoachOpen(false); setMoveOptions([]); setError(""); return; }
-    if (target === "west") westFrom(base); else northFrom(base);
-  };
-  const jumpBar = (cls: string) => <div className={`${cls} jump`}><span className="m">Jump to</span>{(["east", "south", "west", "north"] as const).map((r) => <button key={r} type="button" className={`lnk ${game?.round === r || (!game?.round && r === "east") ? "on" : ""}`} onClick={() => jumpTo(r)}>{r[0].toUpperCase() + r.slice(1)}</button>)}</div>;
   const redoCurrentRound = () => {
     if (!game) return;
     try {
@@ -523,8 +515,8 @@ export default function HomePage() {
   const claimActionRows = Math.max(1, Math.ceil(claimActionCount / 2));
   if (!game) return <Stage><Welcome onBegin={begin} error={error} /></Stage>;
   const scoresOf = (g: EastRoundState) => Object.fromEntries(seats.map((seat) => [seat, g.players[seat].score])) as Record<Seat, number>;
-  if (round === "south-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="south" scores={scoresOf(game)} you={humanSeatOf(game)} intro="Scores carry forward and East moves counterclockwise, so you move from East to North. Your winning objective now comes from a private South Card." kicker="Your secret South Card" heading="Revealed when you start" body="Before play, you swap tiles with the other players: pass three you don't need and take three in return. Then you try to build the hand shown on your card." cta="Start" onStart={startSouthRound} error={error} /></Stage>;
-  if (round === "west-setup") return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="west" scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise again. You are now West. Scores and players carry forward from South." kicker="West Round objective" heading="Pungs, Kongs, and one Pair" body="Build four sets of identical tiles, plus one pair. A set of three is a Pung and a set of four is a Kong; you need at least one Kong. Runs of consecutive tiles do not count in West." cta="Start" onStart={startWestRound} /></Stage>;
+  if (round === "south-setup") return <Stage><RoundSetup round="south" scores={scoresOf(game)} you={humanSeatOf(game)} intro="Scores carry forward and East moves counterclockwise, so you move from East to North. Your winning objective now comes from a private South Card." kicker="Your secret South Card" heading="Revealed when you start" body="Before play, you swap tiles with the other players: pass three you don't need and take three in return. Then you try to build the hand shown on your card." cta="Start" onStart={startSouthRound} error={error} /></Stage>;
+  if (round === "west-setup") return <Stage><RoundSetup round="west" scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise again. You are now West. Scores and players carry forward from South." kicker="West Round objective" heading="Pungs, Kongs, and one Pair" body="Build four sets of identical tiles, plus one pair. A set of three is a Pung and a set of four is a Kong; you need at least one Kong. Runs of consecutive tiles do not count in West." cta="Start" onStart={startWestRound} /></Stage>;
   if (round === "north-setup") {
     const pick = northPick;
     const fmt = pick?.format;
@@ -532,7 +524,7 @@ export default function HomePage() {
     const body = fmt === "east" ? "North is playing the East format. You are South this round and build the same kind of hand as in the East round: four sets of three tiles, plus one pair. Flowers and Seasons add no bonus points."
       : fmt === "south" ? "North is playing the South format. After the Charleston swap, build the hand on your secret South Card. Flowers and Seasons count as concealed jokers, and you can't buy discards."
       : fmt === "west" ? `North is playing the West format. After the Charleston swap, build Pungs, Kongs and one pair. Every ${pick?.joker} in Bamboo, Characters and Dots is a joker, and you can't buy discards.` : "";
-    return <Stage>{jumpBar("ab jumpfix")}<RoundSetup round="north" northFormat={fmt} scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise one final time. You are now South, while your place at the table stays the same. Scores carry forward from West." kicker="This round's format" heading={heading} body={body} cta="Start" onStart={startNorthRound} /></Stage>;
+    return <Stage><RoundSetup round="north" northFormat={fmt} scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise one final time. You are now South, while your place at the table stays the same. Scores carry forward from West." kicker="This round's format" heading={heading} body={body} cta="Start" onStart={startNorthRound} /></Stage>;
   }
   if (round === "match-summary") {
     const humanSeat = humanSeatOf(game);
@@ -676,7 +668,6 @@ export default function HomePage() {
           <button type="button" className="lnk" onClick={() => setSetupStep(0)}>Learn Mahjong</button>
           <button type="button" className="lnk" onClick={begin}>New game</button>
         </div>
-        {jumpBar("row")}
       </div>
 
       <TableBoard game={game} tableGame={tableGame} humanSeat={humanSeat} selectedId={selected} selectedIds={game.phase === "charleston" ? charlestonSelection : undefined} drawnId={drawnId} onTile={isPlaying ? onTile : undefined} chips={chips} chipSel={bestMode ? moveOptions[bestIndex]?.tileId : undefined} groups={groups} />
