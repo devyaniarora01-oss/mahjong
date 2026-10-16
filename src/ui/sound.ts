@@ -2,7 +2,7 @@
  * Table sound: tile clacks and spoken claim call-outs.
  *
  * Clacks are synthesised with Web Audio, so there are no files to ship. Call-outs
- * play a recorded clip when one exists at /audio/calls/<call>.mp3 (drop real
+ * play a recorded clip when one exists at /audio/calls/<seat>-<call>.mp3 (drop real
  * clips in public/audio/calls: pung, chow, kong, mahjong) and fall back to the
  * browser's own voice until then. Tile sounds can be replaced the same way with
  * /audio/tiles/<name>.mp3 (discard, draw).
@@ -108,7 +108,7 @@ const PITCH: Record<string, number> = { east: 1, south: 1.2, west: 0.8, north: 0
 export function playCall(call: Call, seat: string) {
   if (!enabled) return;
   unlockAudio();
-  void playClip(`/audio/calls/${call}.mp3`).then((played) => {
+  void playClip(`/audio/calls/${seat}-${call}.mp3`).then((played) => {
     if (!played && "speechSynthesis" in window) {
       try {
         window.speechSynthesis.cancel();
