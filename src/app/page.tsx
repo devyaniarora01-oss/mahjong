@@ -658,7 +658,6 @@ export default function HomePage() {
   const nextStep = () => (setupStep === activeTutorial.length - 1 ? play() : setSetupStep((step) => step + 1));
   const continueLabel = game.round === "east" ? "Continue to South Round" : game.round === "south" ? "Continue to West Round" : game.round === "west" ? "Continue to North Round" : "View final results";
   const redo = game.round === "east" ? begin : redoCurrentRound;
-  if (typeof window !== "undefined") (window as any).__call = (w: string, pos: "east"|"south"|"west"|"north") => setCallout({ word: w, pos, key: Date.now() }); // TMPHOOK
   const goOn = game.round === "east" ? continueToSouth : game.round === "south" ? continueToWest : game.round === "west" ? continueToNorth : () => setRound("match-summary");
 
   return (
