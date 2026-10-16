@@ -34,17 +34,38 @@ export function unlockAudio() {
     master.connect(ctx.destination);
   }
   if (ctx.state === "suspended") void ctx.resume();
+  CALL_CLIPS.forEach((url) => void loadClip(url)); // decode now so a call-out is instant when a bot claims
 }
 
-const clipExists = new Map<string, Promise<boolean>>();
-const hasClip = (url: string) => {
-  if (!clipExists.has(url)) clipExists.set(url, fetch(url, { method: "HEAD" }).then((r) => r.ok && (r.headers.get("content-type") ?? "").includes("audio")).catch(() => false));
-  return clipExists.get(url)!;
-};
-async function playClip(url: string, volume = 1): Promise<boolean> {
-  if (!(await hasClip(url))) return false;
-  try { const audio = new Audio(url); audio.volume = volume; await audio.play(); return true; } catch { return false; }
+// Clips play through the same Web Audio context as the clacks. A context that was unlocked by a click can play
+// at any time, whereas a fresh <audio> element is blocked by Safari/iOS when a bot claims on a timer.
+const clipBuffers = new Map<string, Promise<AudioBuffer | null>>();
+function loadClip(url: string): Promise<AudioBuffer | null> {
+  if (!ctx) return Promise.resolve(null);
+  if (!clipBuffers.has(url)) {
+    const context = ctx;
+    clipBuffers.set(url, fetch(url)
+      .then((r) => (r.ok && (r.headers.get("content-type") ?? "").includes("audio") ? r.arrayBuffer() : Promise.reject(new Error("no clip"))))
+      .then((data) => new Promise<AudioBuffer>((resolve, reject) => context.decodeAudioData(data, resolve, reject)))
+      .catch(() => null));
+  }
+  return clipBuffers.get(url)!;
 }
+async function playClip(url: string, volume = 1): Promise<boolean> {
+  const buffer = await loadClip(url);
+  if (!buffer || !ctx || !master) return false;
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.value = volume;
+    source.connect(gain); gain.connect(master);
+    source.start();
+    return true;
+  } catch { return false; }
+}
+const CALL_CLIPS = ["east", "south", "west", "north"].flatMap((seat) => ["pung", "chow", "kong", "mahjong"].map((call) => `/audio/calls/${seat}-${call}.mp3`));
 
 function synthClack(power: number, delay = 0) {
   if (!ctx || !master) return;
