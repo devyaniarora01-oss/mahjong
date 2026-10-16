@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { bestMoveOptions, explainHand, handSummary } from "./coaching";
-import { startBrowserEastRound } from "./session";
+import { startBrowserEastRound, startBrowserSouthRound } from "./session";
+import { SOUTH_CARDS, type SouthCard } from "./south-cards";
 import { createTileSet } from "./tiles";
 
 describe("teaching coaching helpers", () => {
@@ -108,5 +109,23 @@ describe("teaching coaching helpers", () => {
       },
     };
     expect(bestMoveOptions(next, "east").some((option) => option.tableWatch?.includes("North has exposed 3 copies of 6 Bamboo"))).toBe(true);
+  });
+
+  it("South explain-my-hand only counts tiles the card can use", () => {
+    const moon = SOUTH_CARDS.find((card) => card.id === "the-moon")!;
+    const cards = { east: moon, south: moon, west: moon, north: moon } as Record<"east" | "south" | "west" | "north", SouthCard>;
+    const game = startBrowserSouthRound({ east: 0, south: 0, west: 0, north: 0 }, () => 0.5, cards as never);
+    const allTiles = createTileSet();
+    const tile = (id: string) => allTiles.find((item) => item.id === id)!;
+    const seat = (["east", "south", "west", "north"] as const).find((s) => game.south!.cards[s] === moon) ?? "east";
+    const hand = [
+      tile("bamboo-2-1"), tile("bamboo-2-2"), tile("dot-4-1"), tile("dot-4-2"), tile("dot-5-1"), tile("dot-6-1"),
+      tile("character-9-1"), tile("wind-east-1"), tile("dot-1-1"), tile("dot-2-1"), tile("dot-3-1"), tile("dot-8-1"), tile("dot-9-1"), tile("dot-7-1"),
+    ];
+    const next = { ...game, players: { ...game.players, [seat]: { ...game.players[seat], hand } } };
+    const summary = handSummary(next, seat);
+    expect(summary.built.join(" ")).not.toContain("Bamboo");
+    expect(summary.built.join(" ")).toContain("4 Dot");
+    expect(summary.weak.join(" ")).toContain("2 Bamboo ×2");
   });
 });
