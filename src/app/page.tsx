@@ -549,7 +549,8 @@ export default function HomePage() {
   const activeTutorial = game.round === "south" ? southTutorial : game.round === "west" ? westTutorial : game.round === "north" ? northTutorialFor(game.north!.format, game.north!.jokerRank) : tutorial;
   const isPlaying = setupStep >= activeTutorial.length;
   const lastDrew = [...game.history].reverse().find((event) => event.type === "drew" && event.seat === humanSeat);
-  const drawnId = lastDrew?.type === "drew" ? lastDrew.tileId : undefined;
+  // The new tile only sits apart while you are choosing a discard; afterwards it joins the hand.
+  const drawnId = lastDrew?.type === "drew" && game.phase === "discard" && game.turn === humanSeat ? lastDrew.tileId : undefined;
   const kongTile = player.hand.find((tile) => canDeclareConcealedKong(game, humanSeat, tile.id));
   const summary = handSummary(game, humanSeat);
   const review = game.status !== "active" ? reviewFeedback(game, decisionNotes) : undefined;
