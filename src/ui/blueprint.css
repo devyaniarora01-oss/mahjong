@@ -315,7 +315,7 @@ button{font:inherit;cursor:pointer}
 .jumpfix{top:auto!important;bottom:18px}
 .modal{box-shadow:none}
 /* welcome: the East door carries its objective so one screen is enough */
-.door .dn{top:380px}.door .dd{top:408px}.door .lk{top:470px}
+.welcome .door .dn{top:380px}.welcome .door .dd{top:408px}.welcome .door .lk{top:470px}
 .eo{position:absolute;left:28px;right:20px;top:408px}
 .eo h2{margin:0;font:800 22px/1.1 var(--display);letter-spacing:-.01em}
 .eo p{margin:8px 0 0;font:400 12px/1.6 var(--mono);color:rgba(243,234,210,.8)}

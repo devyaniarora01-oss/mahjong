@@ -35,7 +35,6 @@ export function Welcome({ onBegin, error }: { onBegin: () => void; error?: strin
               <div className="eo">
                 <h2>Four sets and a pair</h2>
                 <p>Make a 14-tile hand: four sets of three tiles, plus one pair.</p>
-                <div className="tl"><Keys keys={["b6", "b6", "b6"]} w={30} /><Keys keys={["d4", "d5", "d6"]} w={30} /><Keys keys={["c2", "c2"]} w={30} /></div>
                 <button type="button" className="btn pri" onClick={onBegin}>Begin</button>
               </div>
             ) : <><p className="dd">{d.d}</p><div className="lk m">⌀ Opens after {d.after}</div></>}
@@ -44,7 +43,7 @@ export function Welcome({ onBegin, error }: { onBegin: () => void; error?: strin
         ))}
       </div>
       <h1 className="pinL">Mahjong</h1>
-      <p className="lede pinL">Mahjong is played through directional rounds; each round begins with a different direction and can have its own rules. Your goal is to make a valid 14-tile Mahjong hand before anyone else.</p>
+      <p className="lede pinL">Four rounds, each with its own rules. Make a valid 14-tile hand before anyone else.</p>
       {error && <p role="alert" className="err pinL" style={{ position: "static", textAlign: "left", marginTop: 14, zIndex: 3 }}>{error}</p>}
     </div>
   );
@@ -90,7 +89,6 @@ export function RoundSetup(props: {
                   <div className="kick">{kicker}</div>
                   <h2>{heading}</h2>
                   {southCard && <><div className="goal">{southCard.goal}</div><div className="pts m">{southCard.score.toLocaleString()} points{southCard.bonus ? ` · ${southCard.bonus}` : ""}</div><SouthCardKey card={southCard} /></>}
-                  {round === "west" && <div className="tl"><Keys keys={["b7", "b7", "b7"]} w={34} /><Keys keys={["G", "G", "G", "G"]} w={34} /><Keys keys={["R", "R"]} w={34} /></div>}
                   {round === "north" && <div className="chips"><span>East-as-North</span><span>South-as-North</span><span>West-as-North</span></div>}
                   <p>{body}</p>
                   <button type="button" className="btn pri" onClick={onStart}>{cta}</button>
