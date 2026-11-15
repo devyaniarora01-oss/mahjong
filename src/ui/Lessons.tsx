@@ -7,12 +7,14 @@ import type { SouthCard } from "../game/south-cards";
 import { Keys } from "./Tile";
 
 export const tutorial = [
-  ["This is the East Round", "This game begins with the East Round. East begins with one extra tile and therefore discards first."],
-  ["The 144 tiles", "The full set has 108 numbered tiles, 16 Winds, 12 Dragons, and 8 bonus tiles. Bamboo, Characters, Dots, Winds, and Dragons build your hand. Flowers and Seasons go to the bonus area and are replaced from the Flower Wall."],
-  ["Building the table and Flower Wall", "The 144 tiles are shuffled. East rolls and doubles the result to create the Flower Wall. Everyone receives 13 tiles; East receives one extra and starts with 14. Flowers, Seasons, and Kongs take replacement tiles from the Flower Wall. Everything else becomes the Draw Wall."],
-  ["The building blocks", "These are the patterns you can create. Look at the tiles—not just the names—to see what makes each pattern valid."],
-  ["How scoring works", "Everyone starts at 35,000. When someone declares Mahjong, the game records the East Round score. Flowers and Seasons can add separate bonus awards when their documented combinations are collected. The final result screen explains the score after a hand ends."],
-  ["How your turn works", "East begins with 14 tiles and discards one. After that, players draw one tile, consider their hand, and discard one. In East, a discard may be claimed only to complete a Pung, or—by the next player only—a Pure Chow, unless it completes Mahjong. You cannot take a discard merely because you may want it later."],
+  ["Welcome to Mahjong", "Mahjong is a game of building a hand. Four players take turns drawing and discarding tiles, and the first to complete a hand wins. You play against three computer players.\nThe game has four rounds (East, South, West, North), each with its own rules. This is the East Round, and you are East at the bottom of the table."],
+  ["The tiles", "There are 144 tiles.\n• **Numbered tiles** come in three suits, Bamboo, Characters and Dots, numbered 1 to 9.\n• **Winds** (East, South, West, North) and **Dragons** (Red, Green, White) have no numbers. They are just tiles you collect in matching groups, so they can never be part of a run of numbers.\n• **Flowers and Seasons** are bonus tiles, explained next."],
+  ["Flowers and Seasons", "Flowers and Seasons are not part of your hand. When you are dealt or draw one, it moves to the bonus area beside your hand and you take a replacement tile from the **Flower Wall**, a separate row of tiles in the middle of the table.\nNothing is lost: you simply get another tile, so your hand stays the same size."],
+  ["Sets: Pung, Kong and Chow", "Hands are built from sets.\n• A **Pung** is three identical tiles.\n• A **Kong** is four identical tiles, and counts as one set.\n• A **Chow** is three tiles in a row from the same suit, like 4-5-6 of Dots.\nA **Pair** is two identical tiles. Winds and Dragons can make Pungs, Kongs and Pairs, but never Chows."],
+  ["How you win", "A winning hand is 14 tiles: **four sets plus one pair**. Sets you have claimed and shown face-up count too.\nWhen your hand is complete, you declare **Mahjong**. Here is an example winning hand."],
+  ["Your turn", "On your turn you draw one tile from the wall, then discard one tile face-up into the middle. Between turns you hold 13 tiles.\nEast starts with 14 tiles, so East discards first without drawing."],
+  ["Taking another player's discard", "After any discard, you can claim it instead of waiting for your own draw. But only in these cases:\n• **Pung or Kong:** from any player, when the tile matches two or three that you hold.\n• **Chow:** only from the player on your left, who plays just before you.\n• **Mahjong:** from any player, when the tile completes your hand.\nWhen you claim, you show the new set face-up and then discard a tile. If two players want the same tile, Mahjong goes first."],
+  ["Scoring", "Everyone starts with 35,000 points. When someone wins, the other players pay them. East always pays double and collects double.\nAfter each hand, the review lists every payment so you can see exactly how the points moved."],
 ] as const;
 
 export const southTutorial = [
@@ -52,8 +54,10 @@ export const TOUR_META: Record<RoundKey, StepMeta[]> = {
     { card: RIGHT },
     { targets: ["wall"], card: RIGHT },
     { card: RIGHT },
-    { targets: ["scores"], card: RIGHT },
+    { card: RIGHT },
     { targets: ["act", "drawn"], card: RIGHT },
+    { card: RIGHT },
+    { targets: ["scores"], card: RIGHT },
   ],
   south: [{ targets: ["act"], card: RIGHT }, { targets: ["act"], card: RIGHT }, { targets: ["scores"], card: RIGHT }],
   west: [{ targets: ["act"], card: RIGHT }, { targets: ["rail"], card: RIGHT }, { card: RIGHT }, { card: RIGHT }],
@@ -70,6 +74,7 @@ function Cell({ title, children, note }: { title: string; children: ReactNode; n
 }
 
 export function EastVisual({ step }: { step: number }) {
+  const caption = { font: "400 11px/1.45 var(--mono)", color: "rgba(243,234,210,.75)", marginTop: 3 } as const;
   if (step === 1) {
     return (
       <div className="lesson g4 vis">
@@ -80,24 +85,42 @@ export function EastVisual({ step }: { step: number }) {
       </div>
     );
   }
+  if (step === 2) {
+    return (
+      <div className="lesson vis">
+        <div className="flow"><span>Flower</span><span>→ moves to the side</span><span>→ replacement from the Flower Wall</span></div>
+        <div style={{ marginTop: 10 }}><Keys keys={keys("F1", "T1")} w={30} /></div>
+      </div>
+    );
+  }
   if (step === 3) {
     const items: [string, string[], string][] = [
       ["Pung", ["b6", "b6", "b6"], "Three identical tiles."],
-      ["Pure Chow", ["d4", "d5", "d6"], "Three in a row, one suit."],
-      ["Crochet", ["b7", "c7", "d7"], "Same number, all three suits. Keep it concealed."],
-      ["Pure Pair", ["c2", "c2"], "Two identical tiles."],
-      ["Knit", ["b3", "d3"], "Same number, two suits. Needs a Crochet."],
-      ["Kong", ["b5", "b5", "b5", "b5"], "Four identical; counts as three."],
+      ["Chow", ["d4", "d5", "d6"], "Three in a row, one suit."],
+      ["Kong", ["b5", "b5", "b5", "b5"], "Four identical; counts as one set."],
+      ["Pair", ["c2", "c2"], "Two identical tiles."],
     ];
     return (
       <div className="vis">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: "10px 18px" }}>
-          {items.map(([t, k, d]) => <div key={t}><Keys keys={k} w={28} /><b style={{ font: "700 14px var(--display)" }}>{t}</b><div style={{ font: "400 11px/1.45 var(--mono)", color: "rgba(243,234,210,.75)", marginTop: 3 }}>{d}</div></div>)}
+          {items.map(([t, k, d]) => <div key={t}><Keys keys={k} w={28} /><b style={{ font: "700 14px var(--display)" }}>{t}</b><div style={caption}>{d}</div></div>)}
         </div>
-        <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(243,234,210,.16)", font: "500 10.5px var(--mono)", letterSpacing: ".06em", textTransform: "uppercase", color: "rgba(243,234,210,.65)" }}>
-          Example winning hand · 4 groups + 1 pair
-          <div style={{ marginTop: 8 }}><Keys keys={keys("b6", "b6", "b6", "d4", "d5", "d6", "b7", "c7", "d7", "c1", "c2", "c3", "c2", "c2")} w={28} /></div>
-        </div>
+      </div>
+    );
+  }
+  if (step === 4) {
+    return (
+      <div className="vis">
+        <Keys keys={keys("b6", "b6", "b6", "d4", "d5", "d6", "b7", "c7", "d7", "c1", "c2", "c3", "c2", "c2")} w={28} />
+        <div style={{ ...caption, marginTop: 8 }}>Pung · Chow · special set · Chow · Pair</div>
+      </div>
+    );
+  }
+  if (step === 6) {
+    const rows: [string, string][] = [["Pung / Kong", "any player"], ["Chow", "only the player on your left"], ["Mahjong", "any player"]];
+    return (
+      <div className="vis" style={{ display: "grid", gap: 6 }}>
+        {rows.map(([what, who]) => <div key={what} style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: "1px solid rgba(243,234,210,.16)", paddingBottom: 5 }}><b style={{ font: "700 13px var(--display)" }}>{what}</b><span style={caption}>{who}</span></div>)}
       </div>
     );
   }
@@ -163,8 +186,9 @@ export function TourOverlay(props: {
   onBack: () => void;
   onNext: () => void;
   onSkip: () => void;
+  onPractice?: () => void;
 }) {
-  const { title, body, index, total, meta, visual, onBack, onNext, onSkip } = props;
+  const { title, body, index, total, meta, visual, onBack, onNext, onSkip, onPractice } = props;
   const [rects, setRects] = useState<Rect[]>([]);
   const targets = (meta.targets ?? []).filter((t) => t !== "scores");
   useLayoutEffect(() => { setRects(rectsFor(targets)); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [index, meta]);
@@ -188,17 +212,13 @@ export function TourOverlay(props: {
         <rect x="-2000" width="5360" height="850" fill="#050e0a" opacity={targets.length ? 0.74 : 0.62} mask="url(#dimmask)" />
         {rects.map((r, i) => <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} rx="10" fill="none" stroke="#ffd84a" strokeWidth="2" strokeDasharray="7 7" />)}
       </svg>
-      {meta.compass && <>
-        <div className="tnote" style={{ left: 560, top: 118 }}>West faces you</div>
-        <div className="tnote pinL" style={{ left: 142, top: 372 }}>North is on your left</div>
-        <div className="tnote pinR" style={{ left: 940, top: 560 }}>South is on your right</div>
-        <div className="tnote" style={{ left: 520, top: 616 }}>You are East, at the bottom</div>
-      </>}
+      {meta.compass && <CompassNotes />}
       <div id="tc" className={card.x > 680 ? "pinR" : ""} role="dialog" aria-label={title} style={{ left: card.x, top: card.y, width: card.w ?? 340 }}>
         <div className="eyr"><div className="dots">{Array.from({ length: total }, (_, i) => <i key={i} className={i === index ? "on" : ""} />)}</div></div>
         <h2>{title}</h2>
         <Body text={body} />
         {visual}
+        {onPractice && (index === 0 || last) && <button type="button" className="lnk plink" onClick={onPractice}>New to Mahjong? Try a practice hand →</button>}
         <div className="nav">
           {index > 0 && <button type="button" className="tb" onClick={onBack}>Back</button>}
           <span className="sp" />
@@ -211,8 +231,17 @@ export function TourOverlay(props: {
 }
 
 
+export function CompassNotes() {
+  return <>
+    <div className="tnote" style={{ left: 560, top: 118 }}>West faces you</div>
+    <div className="tnote pinL" style={{ left: 142, top: 372 }}>North is on your left</div>
+    <div className="tnote pinR" style={{ left: 940, top: 560 }}>South is on your right</div>
+    <div className="tnote" style={{ left: 520, top: 616 }}>You are East, at the bottom</div>
+  </>;
+}
+
 /** Tour body text: blank-line breaks, "• " pointer lines, and **bold** runs. */
-function Body({ text }: { text: string }) {
+export function Body({ text }: { text: string }) {
   const bold = (t: string) => t.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <b key={i}>{part}</b> : part));
   const lines = text.split("\n");
   const out: React.ReactNode[] = [];

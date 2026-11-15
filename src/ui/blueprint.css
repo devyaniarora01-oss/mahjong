@@ -351,3 +351,14 @@ button{font:inherit;cursor:pointer}
 /* game review headings */
 .modal .rv{color:var(--chalk)}
 html,body{touch-action:manipulation;overscroll-behavior:none}
+
+/* ---------- practice hand ---------- */
+#tc.practice .eyr{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#tc.practice .pk{font:500 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--chalk)}
+#tc.practice .nudge{margin:10px 0 0;padding:8px 10px;border:1px solid var(--chalk);border-radius:6px;color:var(--chalk);font:500 12px/1.45 var(--mono)}
+.hc.hint{outline:2px solid var(--chalk);outline-offset:3px;border-radius:6px;animation:hintpulse 1.4s ease-in-out infinite}
+#act .btn.hint{box-shadow:0 0 0 3px var(--chalk);animation:hintpulse 1.4s ease-in-out infinite}
+@keyframes hintpulse{50%{outline-color:rgba(255,216,74,.35);box-shadow:0 0 0 3px rgba(255,216,74,.35)}}
+@media (prefers-reduced-motion:reduce){.hc.hint,#act .btn.hint{animation:none}}
+.eo .pl{display:block;margin-top:14px;text-align:left;padding:0}
+#tc .plink{display:block;margin-top:12px;padding:0;text-align:left}

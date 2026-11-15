@@ -24,7 +24,7 @@ const DOORS = [
 ];
 
 /** First screen: before anything is dealt. Four doors, one per round; only East opens. */
-export function Welcome({ onBegin, error }: { onBegin: () => void; error?: string }) {
+export function Welcome({ onBegin, onPractice, error }: { onBegin: () => void; onPractice?: () => void; error?: string }) {
   return (
     <div className="screen welcome" data-screen="welcome">
       <div className="doors" aria-hidden="false">
@@ -36,6 +36,7 @@ export function Welcome({ onBegin, error }: { onBegin: () => void; error?: strin
                 <h2>Four sets and a pair</h2>
                 <p>Make a 14-tile hand: four sets of three tiles, plus one pair.</p>
                 <button type="button" className="btn pri" onClick={onBegin}>Begin</button>
+                {onPractice && <button type="button" className="lnk pl" onClick={onPractice}>New to Mahjong? Try a practice hand</button>}
               </div>
             ) : <><p className="dd">{d.d}</p><div className="lk m">⌀ Opens after {d.after}</div></>}
             <div className="dg" aria-hidden="true">{d.glyph}</div>

@@ -19,6 +19,8 @@ import { groupHand, suitWord, type HandGroup } from "../ui/groups";
 import { keyLabel, southPlan } from "../game/south-plan";
 import { EastVisual, SouthCardKey, SouthVisual, TOUR_META, TourOverlay, northTutorialFor, southTutorial, tutorial, westTutorial, type RoundKey } from "../ui/Lessons";
 import { FinalResults, Modal, RoundSetup, Welcome } from "../ui/Screens";
+import { PracticeGuide } from "../ui/Practice";
+import { PRACTICE_INTRO, PRACTICE_SPARES, cardHoldsBots, createPracticeRound, practiceBotAction, practiceCard } from "../game/practice";
 import { isSoundOn, playCall, playTile, setSoundOn, unlockAudio } from "../ui/sound";
 
 const HUMAN: Seat = "east";
@@ -213,6 +215,10 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const [flowerReveal, setFlowerReveal] = useState<FlowerReplacementReveal>();
   const [northPick, setNorthPick] = useState<{ format: "east" | "south" | "west"; joker?: number }>();
+  const [practice, setPractice] = useState(false);
+  const [practiceIntro, setPracticeIntro] = useState(0);
+  const [practiceAcks, setPracticeAcks] = useState<string[]>([]);
+  const [practiceNudge, setPracticeNudge] = useState("");
   const [callout, setCallout] = useState<{ word: string; pos: "east" | "south" | "west" | "north"; key: number }>();
   const [openingBonusIds, setOpeningBonusIds] = useState<string[]>([]);
   const [openingBonusShown, setOpeningBonusShown] = useState(0);
@@ -248,7 +254,19 @@ export default function HomePage() {
     const timer = window.setTimeout(() => setFlowerReveal(undefined), 6_000);
     return () => window.clearTimeout(timer);
   }, [flowerReveal]);
-  const begin = () => { unlockAudio(); try { const next = startBrowserEastRound(); setRound("east"); setSouthCard(undefined); setDecisionNotes([]); setFlowerReveal(undefined); setOpeningBonusIds(next.players.east.bonusTiles.map((tile) => tile.id)); setOpeningBonusShown(0); setGame(next); setSetupStep(NO_TOUR); setSelected(undefined); setCoach("Coach tip: you are East, so you begin with 14 tiles and discard first."); setMoveOptions([]); setCoachOpen(false); setActivity("Your 14 normal hand tiles are ready. Any Flowers or Seasons from the deal will appear beside your hand next."); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not start a new hand."); } };
+  const begin = () => { unlockAudio(); setPractice(false); try { const next = startBrowserEastRound(); setRound("east"); setSouthCard(undefined); setDecisionNotes([]); setFlowerReveal(undefined); setOpeningBonusIds(next.players.east.bonusTiles.map((tile) => tile.id)); setOpeningBonusShown(0); setGame(next); setSetupStep(NO_TOUR); setSelected(undefined); setCoach("Coach tip: you are East, so you begin with 14 tiles and discard first."); setMoveOptions([]); setCoachOpen(false); setActivity("Your 14 normal hand tiles are ready. Any Flowers or Seasons from the deal will appear beside your hand next."); setError(""); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not start a new hand."); } };
+  const startPractice = () => {
+    unlockAudio();
+    try {
+      const next = createPracticeRound();
+      setPractice(true); setPracticeIntro(0); setPracticeAcks([]); setPracticeNudge("");
+      setRound("east"); setSouthCard(undefined); setDecisionNotes([]); setFlowerReveal(undefined);
+      setOpeningBonusIds(next.players.east.bonusTiles.map((tile) => tile.id)); setOpeningBonusShown(0);
+      setGame(next); setSetupStep(NO_TOUR); setSelected(undefined); setMoveOptions([]); setCoachOpen(false);
+      setActivity("This is a practice hand. Follow the guide on the right."); setError("");
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not start the practice hand."); }
+  };
+  const leavePractice = () => { setPractice(false); setGame(undefined); setSelected(undefined); setPracticeNudge(""); };
   const play = () => { const currentTutorial = game?.round === "south" ? southTutorial : game?.round === "west" ? westTutorial : game?.round === "north" ? northTutorialFor(game.north!.format, game.north!.jokerRank) : tutorial; window.localStorage.setItem("mahjong-coach-onboarding", "complete"); setHasSeenTutorial(true); setSetupStep(currentTutorial.length); setCoachOpen(false); setMoveOptions([]); setCoach(explainHand(game!, humanSeatOf(game!), true)); setActivity(game?.round === "south" ? "South Round: compare your tiles to your secret South Card as you play." : game?.round === "west" ? "West Round begins with Charleston. Pass three tiles, then build only Pungs, Kongs, and one Pair." : game?.round === "north" && game.north?.format === "south" ? "South-as-North begins with Charleston. Follow your South Card; Flowers and Seasons are concealed jokers, and buying is not allowed." : game?.round === "north" && game.north?.format === "west" ? `West-as-North begins with Charleston. ${game.north.jokerRank}s are jokers; build only West Pungs, Kongs, and a Pair.` : game?.round === "north" ? "North Round uses the East-as-North format. South begins with 14 tiles and discards first." : "Your turn — choose a tile in your hand, then discard it. East begins with 14 tiles."); };
   const continueToSouth = () => {
     const cards = dealSouthCards(Math.random);
@@ -442,13 +460,14 @@ export default function HomePage() {
   const tutorialLength = game?.round === "south" ? southTutorial.length : game?.round === "west" ? westTutorial.length : game?.round === "north" ? northTutorialFor(game.north!.format, game.north!.jokerRank).length : tutorial.length;
   useEffect(() => {
     if (!game || setupStep < tutorialLength || openingBonusShown >= openingBonusIds.length) return;
+    if (practice && practiceIntro < PRACTICE_INTRO.length - 1) return;
     const tile = allTilesById.get(openingBonusIds[openingBonusShown]);
     const timer = window.setTimeout(() => {
       setOpeningBonusShown((shown) => shown + 1);
       if (tile) { setFlowerReveal({ seat: humanSeatOf(game), bonusTileId: tile.id }); setActivity(`${tileLabel(tile)} is a bonus tile. It moved beside your hand, and the Flower Wall gave you a replacement.`); }
     }, openingBonusShown === 0 ? 350 : 1250);
     return () => window.clearTimeout(timer);
-  }, [game, openingBonusIds, openingBonusShown, setupStep, tutorialLength]);
+  }, [game, openingBonusIds, openingBonusShown, setupStep, tutorialLength, practice, practiceIntro]);
   useEffect(() => {
     if (openingBonusIds.length && openingBonusShown >= openingBonusIds.length) setOpeningBonusIds([]);
   }, [openingBonusIds.length, openingBonusShown]);
@@ -457,11 +476,12 @@ export default function HomePage() {
     const humanSeat = humanSeatOf(game);
     const humanTurn = game.turn === humanSeat && (game.phase === "draw" || game.phase === "discard");
     if (humanTurn || humanClaim) return;
+    if (practice && (practiceIntro < PRACTICE_INTRO.length || cardHoldsBots(practiceCard(game, practiceAcks)))) return;
     setActivity(game.phase === "claim" ? "The table is checking whether anyone can claim this discard…" : `${name(game.turn, humanSeat)} is thinking…`);
     const timer = window.setTimeout(() => setGame((current) => {
       if (!current || current !== game) return current;
       const currentHumanSeat = humanSeatOf(current);
-      const action = current.phase === "claim" ? chooseBotClaimAction(current, currentHumanSeat) : chooseBotTurnAction(current, current.turn);
+      const action = practice ? practiceBotAction(current) : current.phase === "claim" ? chooseBotClaimAction(current, currentHumanSeat) : chooseBotTurnAction(current, current.turn);
       if (!action) return current;
       const message = action.type === "draw" ? `${name(action.seat, currentHumanSeat)} draws a tile from the Draw Pile.`
         : action.type === "discard" ? `${name(action.seat, currentHumanSeat)} discarded ${tileLabel(current.players[action.seat].hand.find((tile) => tile.id === action.tileId)!)}.`
@@ -473,9 +493,9 @@ export default function HomePage() {
       setFlowerReveal(flowerReplacementAfter(current, next));
       setActivity(activityAfterFlowerWall(current, next, message));
       return next;
-    }), 1500);
+    }), practice ? 900 : 1500);
     return () => window.clearTimeout(timer);
-  }, [game, humanClaim, setupStep, tutorialLength]);
+  }, [game, humanClaim, setupStep, tutorialLength, practice, practiceIntro, practiceAcks]);
 
   const chowChoices = useMemo(() => {
     const humanSeat = game ? humanSeatOf(game) : HUMAN;
@@ -506,7 +526,7 @@ export default function HomePage() {
       + chowChoices.length
       + 1; // Pass is always available whenever a claim prompt is visible.
   const claimActionRows = Math.max(1, Math.ceil(claimActionCount / 2));
-  if (!game) return <Stage><Welcome onBegin={begin} error={error} /></Stage>;
+  if (!game) return <Stage><Welcome onBegin={begin} onPractice={startPractice} error={error} /></Stage>;
   const scoresOf = (g: EastRoundState) => Object.fromEntries(seats.map((seat) => [seat, g.players[seat].score])) as Record<Seat, number>;
   if (round === "south-setup") return <Stage><RoundSetup round="south" scores={scoresOf(game)} you={humanSeatOf(game)} intro="Scores carry forward and East moves counterclockwise, so you move from East to North. Your winning objective now comes from a private South Card." kicker="Your secret South Card" heading="Revealed when you start" body="Before play, you swap tiles with the other players: pass three you don't need and take three in return. Then you try to build the hand shown on your card." cta="Start" onStart={startSouthRound} error={error} /></Stage>;
   if (round === "west-setup") return <Stage><RoundSetup round="west" scores={scoresOf(game)} you={humanSeatOf(game)} intro="East moves counterclockwise again. You are now West. Scores and players carry forward from South." kicker="West Round objective" heading="Pungs, Kongs, and one Pair" body="Build four sets of identical tiles, plus one pair. A set of three is a Pung and a set of four is a Kong; you need at least one Kong. Runs of consecutive tiles do not count in West." cta="Start" onStart={startWestRound} /></Stage>;
@@ -578,7 +598,14 @@ export default function HomePage() {
   const chips: Record<string, string> = {};
   if (bestMode) moveOptions.forEach((option, index) => { chips[option.tileId] = index === 0 ? "★ Best" : `Option ${index + 1}`; });
   const bestIndex = Math.min(bestIdx, Math.max(0, moveOptions.length - 1));
+  const guide = practice ? (practiceIntro < PRACTICE_INTRO.length ? PRACTICE_INTRO[practiceIntro] : practiceCard(game, practiceAcks)) : undefined;
+  const guideLive = practice && practiceIntro >= PRACTICE_INTRO.length;
   const onTile = (id: string) => {
+    if (practice) {
+      if (!guideLive) return;
+      if (game.phase === "discard" && !PRACTICE_SPARES.includes(id)) { setPracticeNudge("That tile belongs to a set you are building. Click one of the glowing tiles."); return; }
+      setPracticeNudge("");
+    }
     if (game.phase === "charleston") { toggleCharlestonTile(id); return; }
     const hit = moveOptions.findIndex((option) => option.tileId === id);
     if (hit >= 0) setBestIdx(hit);
@@ -614,7 +641,11 @@ export default function HomePage() {
   // ---- actions ----
   const turnNow = game.status === "active" && game.turn === humanSeat;
   const act: ReactNode[] = [];
-  const press = (label: string, onClick: () => void, kind = "", disabled = false) => act.push(<button key={label} type="button" className={`btn ${kind}`} disabled={disabled} onClick={onClick}>{label}</button>);
+  const practiceAllows = (label: string) => !practice ? true : !guideLive ? false
+    : guide?.claim === "pung" ? label === "Claim Pung"
+      : guide?.claim === "chow" ? label.startsWith("Claim ") && label.includes("–")
+        : !(label === "Pass" || label.startsWith("Claim "));
+  const press = (label: string, onClick: () => void, kind = "", disabled = false) => { if (!practiceAllows(label)) return; act.push(<button key={label} type="button" className={`btn ${kind} ${guide?.hint === "act" && !disabled ? "hint" : ""}`} disabled={disabled} onClick={onClick}>{label}</button>); };
   if (!isPlaying) press("Discard a tile", () => undefined, "pri", true);
   if (isPlaying) {
     if (game.phase === "charleston") {
@@ -652,22 +683,27 @@ export default function HomePage() {
       <div className="ab" id="hdr"><div className="eb m"><i /><span>{eyebrow}</span></div><h1>{headline.replace(/\.$/, "")}</h1></div>
       {isPlaying && <div className="ab" id="com">{commentary}</div>}
       <div className="ab" id="tools">
-        <div className="row">
+        {!practice && <div className="row">
           <button type="button" className={`btn ${explainMode ? "on" : ""}`} onClick={() => { setMoveOptions([]); setCoachOpen((open) => !open || bestMode); }}>Explain my hand</button>
           <button type="button" className={`btn cream ${bestMode ? "on" : ""}`} onClick={showBest}>Best move</button>
-        </div>
+        </div>}
         <div className="row">
           {isSouthCardRound && <button type="button" className="lnk" data-tour="southcard" onClick={() => { setCoachOpen(false); setSouthCardOpen((open) => !open); }}>Your South Card</button>}
           <button type="button" className="lnk" onClick={toggleSound} aria-pressed={soundOn}>Sound: {soundOn ? "On" : "Off"}</button>
-          <button type="button" className="lnk" onClick={() => setSetupStep(0)}>Learn Mahjong</button>
-          <button type="button" className="lnk" onClick={begin}>New game</button>
+          {practice ? <button type="button" className="lnk" onClick={leavePractice}>Leave practice</button> : <>
+            <button type="button" className="lnk" onClick={() => setSetupStep(0)}>Learn Mahjong</button>
+            <button type="button" className="lnk" onClick={begin}>New game</button>
+          </>}
         </div>
       </div>
 
-      <TableBoard game={game} tableGame={tableGame} humanSeat={humanSeat} selectedId={selected} selectedIds={game.phase === "charleston" ? charlestonSelection : undefined} drawnId={drawnId} onTile={isPlaying ? onTile : undefined} chips={chips} chipSel={bestMode ? moveOptions[bestIndex]?.tileId : undefined} groups={groups} />
+      <TableBoard game={game} tableGame={tableGame} humanSeat={humanSeat} selectedId={selected} selectedIds={game.phase === "charleston" ? charlestonSelection : undefined} drawnId={drawnId} hintIds={guideLive && guide?.hint === "spares" ? PRACTICE_SPARES : undefined} onTile={isPlaying ? onTile : undefined} chips={chips} chipSel={bestMode ? moveOptions[bestIndex]?.tileId : undefined} groups={groups} />
       {tourScores && <div className="ab sn m" style={{ left: 52, top: 668, zIndex: 65, background: "var(--ink)", padding: "3px 8px" }}><b>{cap(humanSeat)}</b> · <span className="sc">{player.score.toLocaleString()}</span></div>}
 
       {isPlaying && <div className="ab" id="act" data-tour="act">{act}</div>}
+      {practice && guide && <PracticeGuide card={guide} step={guideLive ? undefined : { index: practiceIntro, total: PRACTICE_INTRO.length }} nudge={practiceNudge}
+        onNext={() => guideLive ? setPracticeAcks((acks) => [...acks, guide.id]) : setPracticeIntro((index) => index + 1)}
+        onExit={leavePractice} onPlay={begin} onRestart={startPractice} />}
       {isPlaying && error && <div className="err">{error}</div>}
 
       {coachOpen && isPlaying && (
@@ -723,7 +759,7 @@ export default function HomePage() {
           visual={game.round === "south" ? <SouthVisual step={setupStep} card={southCard} /> : game.round === "east" || !game.round ? <EastVisual step={setupStep} /> : null}
           onBack={() => setSetupStep((step) => Math.max(0, step - 1))}
           onNext={nextStep}
-          onSkip={play}
+          onSkip={play} onPractice={game.round === "east" || !game.round ? startPractice : undefined}
         />
       )}
 
@@ -740,7 +776,7 @@ export default function HomePage() {
         </Modal>
       )}
 
-      {game.status !== "active" && review && (
+      {game.status !== "active" && review && !practice && (
         <Modal label="Game review">
           <h2 className="rv">{game.status === "mahjong" ? `${name(game.winner!.seat, humanSeat)} declared Mahjong` : "The hand ended in a draw"}</h2>
           <p>{review.happened}</p>

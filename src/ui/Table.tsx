@@ -66,6 +66,8 @@ type TableProps = {
   selectedId?: string;
   selectedIds?: readonly string[];
   drawnId?: string;
+  /** Tiles to outline (the practice hand points at the ones to discard). */
+  hintIds?: readonly string[];
   onTile?: (id: string) => void;
   chips?: Record<string, string>;
   chipSel?: string;
@@ -74,7 +76,7 @@ type TableProps = {
   groups?: HandGroup[];
 };
 
-export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds, drawnId, onTile, chips, chipSel, groups }: TableProps) {
+export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds, drawnId, hintIds, onTile, chips, chipSel, groups }: TableProps) {
   const ponds = pondsOf(game);
 
   // Explain my hand: when the rack regroups (or goes back to one row), slide each tile from where it was to where it is now.
@@ -156,10 +158,11 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
   const gaps = (me.melds.length + (me.bonusTiles.length ? 1 : 0) + (groups ? groups.length : 0)) * 24 + (!groups ? 14 : 0);
   const tw = Math.max(34, Math.min(58, Math.floor((1230 - gaps) / Math.max(1, total) - 2)));
   const cell = (t: Tile, interactive: boolean, extra = "", showPips = interactive) => {
+    const hinted = hintIds?.includes(t.id);
     const lifted = t.id === selectedId || selectedIds?.includes(t.id);
     const chip = chips?.[t.id];
     return (
-      <div key={t.id} className={`hc ${interactive && onTile ? "click" : ""} ${lifted ? "lift" : ""} ${extra}`} onClick={interactive && onTile ? () => onTile(t.id) : undefined} data-tile={t.id} data-tour={extra.includes("drawn") ? "drawn" : undefined}>
+      <div key={t.id} className={`hc ${interactive && onTile ? "click" : ""} ${lifted ? "lift" : ""} ${hinted && interactive ? "hint" : ""} ${extra}`} onClick={interactive && onTile ? () => onTile(t.id) : undefined} data-tile={t.id} data-tour={extra.includes("drawn") ? "drawn" : undefined}>
         {chip && <div className={`chipb ${chipSel === t.id ? "sel" : ""}`}>{chip}</div>}
         <BpTile tile={t} w={tw} />
         {showPips && <div className="pips">{pips(t)}</div>}
