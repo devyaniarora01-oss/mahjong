@@ -363,9 +363,11 @@ html,body{touch-action:manipulation;overscroll-behavior:none}
 .eo .pl{display:block;margin-top:14px;text-align:left;padding:0}
 #tc .plink{display:block;margin-top:12px;padding:0;text-align:left}
 
-/* Practice guide: no panel, just a note written on the felt with a chalk rule beside it. */
-#tc.practice.bare{background:none;border:0;border-radius:0;box-shadow:none;padding:2px 0 2px 18px;border-left:2px solid var(--chalk);text-shadow:0 1px 2px rgba(0,0,0,.45)}
-#tc.practice.bare h2{font-size:22px;margin-top:6px}
-#tc.practice.bare p{font-size:13px}
+/* Practice guide: a compact card. Key-moment cards sit just above the action button, with a pointer to it. */
+#tc.practice.bare{padding:14px 18px 14px}
+#tc.practice.bare h2{font-size:20px;margin-top:6px}
+#tc.practice.bare p{font-size:12.5px;margin-top:8px}
 #tc.practice.bare .nav{margin-top:12px}
-.lesson .ts.grp,.vis .ts.grp{flex-wrap:nowrap;flex:none;margin-bottom:0}.lesson .ts.grp{--w:20px}
+#tc.practice.near{left:600px;bottom:244px;top:auto;width:340px;transform:translateX(-50%);box-shadow:0 10px 26px rgba(0,0,0,.5)}
+#tc.practice.near::after{content:"";position:absolute;left:calc(50% + 80px);bottom:-8px;width:14px;height:14px;background:var(--ink);border-right:1px solid rgba(243,234,210,.28);border-bottom:1px solid rgba(243,234,210,.28);transform:translateX(-50%) rotate(45deg)}
+#tc.practice.near .eyr{display:none}#tc.practice.near h2{margin-top:0}#tc.practice.near .nav{margin-top:10px}

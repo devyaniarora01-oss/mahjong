@@ -148,7 +148,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
       return {
         id: "pung",
         title: "South discarded a 5 Bamboo",
-        body: "You may take another player's discard when it completes a set. You hold two 5 Bamboo, so this tile makes a **Pung**.\nA Pung can be claimed from **any** player. Press Claim Pung.",
+        body: "You hold two 5 Bamboo, so this tile makes a **Pung**. A Pung can be claimed from **any** player.",
         tiles: ["b5", "b5", "b5"],
         claim: "pung",
         hint: "act",
@@ -158,7 +158,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
       return {
         id: "west",
         title: "West discarded a 3 Dots",
-        body: "With your 4 and 5 Dots, a 3 would make a Chow (3-4-5). But you cannot take it: **a Chow can only come from the player on your left**, and that is North. West is across from you.\nOnly a Pung could be taken from West, so you let this one go.",
+        body: "A 3 would make a Chow with your 4 and 5 Dots, but **a Chow can only come from the player on your left**, and that is North. West is across from you, so let this one go.",
         tiles: ["d3", "d4", "d5"],
         next: "Got it",
       };
@@ -167,7 +167,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
       return {
         id: "chow",
         title: "North discarded a 6 Dots",
-        body: "North is on your left, so you may take this tile for a **Chow**: your 4 and 5 Dots plus this 6 Dots make 4-5-6.\nPress Claim 4–5–6 dots.",
+        body: "North is on your left, so you may take this tile for a **Chow**: your 4 and 5 Dots plus this 6 make 4-5-6.",
         tiles: ["d4", "d5", "d6"],
         claim: "chow",
         hint: "act",
