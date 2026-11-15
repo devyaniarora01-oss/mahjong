@@ -132,7 +132,7 @@ export const PRACTICE_INTRO: GuideCard[] = [
   {
     id: "hand",
     title: "Look at your hand",
-    body: "You were dealt a Flower. It moved to the side of your hand and the Flower Wall gave you a replacement tile.\nYou already hold a Chow (2-3-4 Characters) and a Pung (three Red Dragons). These are **concealed** sets: they stay in your hand, hidden from the other players, and that is allowed.\nNext, throw away a tile that you do not need.",
+    body: "You were dealt a Flower. It moved to the side of your hand and the Flower Wall gave you a replacement tile.\nYou already hold a Chow (2-3-4 Characters) and a Pung (three Red Dragons). These are **concealed**: they stay hidden in your hand, which is allowed.\nNext, throw away a tile that you do not need.",
     tiles: ["c2", "c3", "c4", "R", "R", "R"],
     next: "Start",
   },
@@ -149,7 +149,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
     return {
       id: "finish",
       title: "That's Mahjong!",
-      body: "You won with four sets and a pair: a Pung of 5 Bamboo you claimed from South, a Chow of 4-5-6 Dots you claimed from North on your left, a Chow of Characters, and a Pung of Red Dragons, plus the Green Dragon pair.\nBecause you claimed two sets, this win has a base value of **500** points (as East you collect it doubled from each player). A win by drawing the last tile with every set concealed and no claims at all has a base of **1,000**. Claiming is faster, but worth half.\nYou are ready for a real hand.",
+      body: "You won with a Pung of 5 Bamboo (from South), a Chow of 4-5-6 Dots (from North), a Chow of Characters, a Pung of Red Dragons and a Green Dragon pair.\nYou claimed two sets, so the win is worth a base of **500**. With every set concealed it would be **1,000**.",
       finish: true,
     };
   }
@@ -199,7 +199,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
       return {
         id: "win",
         title: "You drew the Green Dragon",
-        body: "That completes your pair of Green Dragons. You now have four sets and one pair: two exposed (claimed) and two concealed (in your hand).\nPress Declare Mahjong.",
+        body: "That completes your pair of Green Dragons. You now have four sets and one pair: two exposed and two concealed.\nPress Declare Mahjong.",
         tiles: ["G", "G"],
         hint: "act",
       };
@@ -216,7 +216,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
       return {
         id: "afterPung",
         title: "Pung made",
-        body: "Your three 5 Bamboo now sit face-up beside your hand. **Why exposed?** The tile came from a discard everyone saw, so the set you make with it is shown to all.\nSets you build from your own draws, like your Red Dragons, can stay **concealed** in your hand. That matters: the others cannot see them, and an all-concealed win is worth double.\nAfter claiming a discard you must discard a tile, and you do not draw this turn. Discard another glowing tile.",
+        body: "Your 5 Bamboo are face-up because the tile came from a discard everyone saw. Sets you build from your own draws, like your Red Dragons, can stay **concealed**.\nAfter a claim you do not draw: discard another glowing tile.",
         tiles: ["b5", "b5", "b5"],
         hint: "spares",
       };
@@ -224,7 +224,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
     return {
       id: "afterChow",
       title: "Chow made",
-      body: "You now have two **exposed** sets (the claimed ones) and two **concealed** sets still in your hand (2-3-4 Characters and the Red Dragons). The others can read what you are collecting from the exposed ones, but not from the concealed ones.\nYou are one Green Dragon away from winning: you hold one, and need a second for the pair. Discard your last glowing tile.",
+      body: "Two **exposed** sets (claimed) and two **concealed** ones in your hand. Others can read what you collect from exposed sets, not concealed ones.\nOne more Green Dragon wins. Discard your last glowing tile.",
       hint: "spares",
     };
   }
