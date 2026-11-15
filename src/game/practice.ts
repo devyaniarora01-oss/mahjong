@@ -149,7 +149,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
     return {
       id: "finish",
       title: "That's Mahjong!",
-      body: "You won with four sets and a pair: a Pung of 5 Bamboo you claimed from South, a Chow of 4-5-6 Dots you claimed from North on your left, a Chow of Characters, and a Pung of Red Dragons, plus the Green Dragon pair.\nYou are ready for a real hand.",
+      body: "You won with four sets and a pair: a Pung of 5 Bamboo you claimed from South, a Chow of 4-5-6 Dots you claimed from North on your left, a Chow of Characters, and a Pung of Red Dragons, plus the Green Dragon pair.\nBecause you claimed two sets, this win has a base value of **500** points (as East you collect it doubled from each player). A win by drawing the last tile with every set concealed and no claims at all has a base of **1,000**. Claiming is faster, but worth half.\nYou are ready for a real hand.",
       finish: true,
     };
   }
@@ -216,7 +216,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
       return {
         id: "afterPung",
         title: "Pung made",
-        body: "Your three 5 Bamboo now sit face-up beside your hand: a set made from **another player's discard** must be **exposed**. Sets you build from your own draws, like your Red Dragons, stay concealed.\nAfter claiming a discard you must discard a tile, and you do not draw this turn. Discard another glowing tile.",
+        body: "Your three 5 Bamboo now sit face-up beside your hand. **Why exposed?** The tile came from a discard everyone saw, so the set you make with it is shown to all.\nSets you build from your own draws, like your Red Dragons, can stay **concealed** in your hand. That matters: the others cannot see them, and an all-concealed win is worth double.\nAfter claiming a discard you must discard a tile, and you do not draw this turn. Discard another glowing tile.",
         tiles: ["b5", "b5", "b5"],
         hint: "spares",
       };
@@ -224,7 +224,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
     return {
       id: "afterChow",
       title: "Chow made",
-      body: "You now have two **exposed** sets (the claimed ones) and two **concealed** sets still in your hand (2-3-4 Characters and the Red Dragons). You are one Green Dragon away from winning: you hold one, and need a second for the pair.\nDiscard your last glowing tile.",
+      body: "You now have two **exposed** sets (the claimed ones) and two **concealed** sets still in your hand (2-3-4 Characters and the Red Dragons). The others can read what you are collecting from the exposed ones, but not from the concealed ones.\nYou are one Green Dragon away from winning: you hold one, and need a second for the pair. Discard your last glowing tile.",
       hint: "spares",
     };
   }
