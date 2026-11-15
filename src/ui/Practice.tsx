@@ -33,7 +33,7 @@ export function PracticeGuide(props: {
   return (
     <>
       {card.compass && <CompassNotes />}
-      <div id="tc" className={`pinR practice bare ${near ? "near" : "side"} ${near && place.arrow ? `ar-${place.arrow}` : ""}`} role="dialog" aria-label={card.title} style={near ? { ...(({ left, top, bottom }) => ({ left, top, bottom }))(place), ["--ay" as string]: `${place.ay ?? 0}px` } : { left: 922, top: 150, width: 300 }}>
+      <div id="tc" className={`${near ? "" : "pinR"} practice bare ${near ? "near" : "side"} ${near && place.arrow ? `ar-${place.arrow}` : ""}`} role="dialog" aria-label={card.title} style={near ? { ...(({ left, top, bottom }) => ({ left, top, bottom }))(place), ["--ay" as string]: `${place.ay ?? 0}px` } : { left: 922, top: 150, width: 300 }}>
         <div className="eyr">
           {!near && <span className="pk">Practice hand</span>}
           {step && <div className="dots">{Array.from({ length: step.total }, (_, i) => <i key={i} className={i === step.index ? "on" : ""} />)}</div>}
