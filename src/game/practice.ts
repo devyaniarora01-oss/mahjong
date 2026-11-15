@@ -132,7 +132,7 @@ export const PRACTICE_INTRO: GuideCard[] = [
   {
     id: "hand",
     title: "Look at your hand",
-    body: "You were dealt a Flower. It moved to the side of your hand and the Flower Wall gave you a replacement tile.\nYou already hold a Chow (2-3-4 Characters) and a Pung (three Red Dragons). Next, throw away a tile that you do not need.",
+    body: "You were dealt a Flower. It moved to the side of your hand and the Flower Wall gave you a replacement tile.\nYou already hold a Chow (2-3-4 Characters) and a Pung (three Red Dragons). These are **concealed** sets: they stay in your hand, hidden from the other players, and that is allowed.\nNext, throw away a tile that you do not need.",
     tiles: ["c2", "c3", "c4", "R", "R", "R"],
     next: "Start",
   },
@@ -199,7 +199,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
       return {
         id: "win",
         title: "You drew the Green Dragon",
-        body: "That completes your pair of Green Dragons. You now have four sets (a Chow, a Pung, another Chow and another Pung) and one pair.\nPress Declare Mahjong.",
+        body: "That completes your pair of Green Dragons. You now have four sets and one pair: two exposed (claimed) and two concealed (in your hand).\nPress Declare Mahjong.",
         tiles: ["G", "G"],
         hint: "act",
       };
@@ -216,7 +216,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
       return {
         id: "afterPung",
         title: "Pung made",
-        body: "Your three 5 Bamboo now sit face-up beside your hand, so everyone can see them. They are locked in.\nAfter claiming a discard you must discard a tile, and you do not draw this turn. Discard another glowing tile.",
+        body: "Your three 5 Bamboo now sit face-up beside your hand: a set made from **another player's discard** must be **exposed**. Sets you build from your own draws, like your Red Dragons, stay concealed.\nAfter claiming a discard you must discard a tile, and you do not draw this turn. Discard another glowing tile.",
         tiles: ["b5", "b5", "b5"],
         hint: "spares",
       };
@@ -224,7 +224,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
     return {
       id: "afterChow",
       title: "Chow made",
-      body: "You now have two face-up sets. You are one Green Dragon away from winning: you hold one, and need a second for the pair.\nDiscard your last glowing tile.",
+      body: "You now have two **exposed** sets (the claimed ones) and two **concealed** sets still in your hand (2-3-4 Characters and the Red Dragons). You are one Green Dragon away from winning: you hold one, and need a second for the pair.\nDiscard your last glowing tile.",
       hint: "spares",
     };
   }
