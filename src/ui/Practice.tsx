@@ -4,7 +4,7 @@ import { Body, CompassNotes } from "./Lessons";
 import { Keys } from "./Tile";
 import type { GuideCard } from "../game/practice";
 
-/** The coach box for the scripted practice hand. It sits where the Learn Mahjong cards sit. */
+/** The coach note for the scripted practice hand. It sits where the Learn Mahjong cards sit. */
 export function PracticeGuide(props: {
   card: GuideCard;
   step?: { index: number; total: number };
@@ -15,10 +15,12 @@ export function PracticeGuide(props: {
   onRestart: () => void;
 }) {
   const { card, step, nudge, onNext, onExit, onPlay, onRestart } = props;
+  // While the other players simply take their turns there is nothing to explain: show no note at all.
+  if (card.id === "watch" && !nudge) return null;
   return (
     <>
       {card.compass && <CompassNotes />}
-      <div id="tc" className="pinR practice" role="dialog" aria-label={card.title} style={{ left: 922, top: 150, width: 340 }}>
+      <div id="tc" className="pinR practice bare" role="dialog" aria-label={card.title} style={{ left: 922, top: 150, width: 296 }}>
         <div className="eyr">
           <span className="pk">Practice hand</span>
           {step && <div className="dots">{Array.from({ length: step.total }, (_, i) => <i key={i} className={i === step.index ? "on" : ""} />)}</div>}

@@ -7,8 +7,8 @@ import type { SouthCard } from "../game/south-cards";
 import { Keys } from "./Tile";
 
 export const tutorial = [
-  ["Welcome to Mahjong", "Mahjong is a game of building a hand. Four players take turns drawing and discarding tiles, and the first to complete a hand wins. You play against three computer players.\nThe game has four rounds (East, South, West, North), each with its own rules. This is the East Round, and you are East at the bottom of the table."],
-  ["The tiles", "There are 144 tiles.\n• **Numbered tiles** come in three suits, Bamboo, Characters and Dots, numbered 1 to 9.\n• **Winds** (East, South, West, North) and **Dragons** (Red, Green, White) have no numbers. They are just tiles you collect in matching groups, so they can never be part of a run of numbers.\n• **Flowers and Seasons** are bonus tiles, explained next."],
+  ["Welcome to Mahjong", "Mahjong is a game of building a hand. Four players take turns drawing and discarding tiles, and the first to complete a hand wins.\nThe game has four rounds (East, South, West, North), each with its own rules. This is the East Round, and you are East at the bottom of the table."],
+  ["The tiles", "There are 144 tiles.\n• **Numbered tiles** come in three suits, Bamboo, Characters and Dots, numbered 1 to 9.\n• **Winds** (East, South, West, North) and **Dragons** (Red, Green, White) have no numbers. They are just tiles you collect in matching groups.\n• **Flowers and Seasons** are bonus tiles, explained next."],
   ["Flowers and Seasons", "Flowers and Seasons are not part of your hand. When you are dealt or draw one, it moves to the bonus area beside your hand and you take a replacement tile from the **Flower Wall**, a separate row of tiles in the middle of the table.\nNothing is lost: you simply get another tile, so your hand stays the same size."],
   ["Sets: Pung, Kong and Chow", "Hands are built from sets.\n• A **Pung** is three identical tiles.\n• A **Kong** is four identical tiles, and counts as one set.\n• A **Chow** is three tiles in a row from the same suit, like 4-5-6 of Dots.\nA **Pair** is two identical tiles. Winds and Dragons can make Pungs, Kongs and Pairs, but never Chows."],
   ["How you win", "A winning hand is 14 tiles: **four sets plus one pair**. Sets you have claimed and shown face-up count too.\nWhen your hand is complete, you declare **Mahjong**. Here is an example winning hand."],
@@ -52,7 +52,7 @@ export const TOUR_META: Record<RoundKey, StepMeta[]> = {
   east: [
     { compass: true, card: RIGHT },
     { card: RIGHT },
-    { targets: ["wall"], card: RIGHT },
+    { targets: ["flowerwall"], card: RIGHT },
     { card: RIGHT },
     { card: RIGHT },
     { targets: ["act", "drawn"], card: RIGHT },
@@ -70,7 +70,7 @@ export const TOUR_META: Record<RoundKey, StepMeta[]> = {
 const keys = (...k: string[]) => k;
 
 function Cell({ title, children, note }: { title: string; children: ReactNode; note?: string }) {
-  return <div className="cell"><b className="h">{title}</b>{children}{note && <div>{note}</div>}</div>;
+  return <div className="cell"><b className="ch">{title}</b>{children}{note && <div>{note}</div>}</div>;
 }
 
 export function EastVisual({ step }: { step: number }) {
@@ -80,7 +80,7 @@ export function EastVisual({ step }: { step: number }) {
       <div className="lesson g4 vis">
         <Cell title="Numbered suits"><Keys keys={keys("b1", "c1", "d1")} /></Cell>
         <Cell title="Winds"><Keys keys={keys("E", "S", "W", "N")} w={24} /></Cell>
-        <Cell title="Dragons"><Keys keys={keys("R", "G", "H")} /></Cell>
+        <Cell title="Dragons"><Keys keys={keys("R", "G", "H")} w={30} /></Cell>
         <Cell title="Bonus tiles"><Keys keys={keys("F1", "T1")} /></Cell>
       </div>
     );
@@ -111,8 +111,10 @@ export function EastVisual({ step }: { step: number }) {
   if (step === 4) {
     return (
       <div className="vis">
-        <Keys keys={keys("b6", "b6", "b6", "d4", "d5", "d6", "b7", "c7", "d7", "c1", "c2", "c3", "c2", "c2")} w={28} />
-        <div style={{ ...caption, marginTop: 8 }}>Pung · Chow · special set · Chow · Pair</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "nowrap" }}>
+          {[["b6", "b6", "b6"], ["d4", "d5", "d6"], ["c1", "c2", "c3"], ["R", "R", "R"], ["c2", "c2"]].map((g, i) => <Keys key={i} keys={g} w={20} className="grp" />)}
+        </div>
+        <div style={{ ...caption, marginTop: 8 }}>Pung · Chow · Chow · Pung · Pair</div>
       </div>
     );
   }

@@ -493,7 +493,7 @@ export default function HomePage() {
       setFlowerReveal(flowerReplacementAfter(current, next));
       setActivity(activityAfterFlowerWall(current, next, message));
       return next;
-    }), practice ? 900 : 1500);
+    }), practice ? 2200 : 1500);
     return () => window.clearTimeout(timer);
   }, [game, humanClaim, setupStep, tutorialLength, practice, practiceIntro, practiceAcks]);
 

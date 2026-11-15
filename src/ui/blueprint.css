@@ -33,7 +33,7 @@ button{font:inherit;cursor:pointer}
 .cz span:first-child{font:800 calc(var(--w)*.44)/1 var(--display);color:#16202e}
 .cz span:last-child{font:800 calc(var(--w)*.3)/1 var(--display);color:var(--red);margin-top:calc(var(--w)*.03)}
 .t.w{font-size:calc(var(--w)*.62)}.t.r{color:var(--red);font-size:calc(var(--w)*.62)}.t.g{color:var(--green);font-size:calc(var(--w)*.62)}
-.t.h::before{content:"";width:46%;height:52%;border:calc(var(--w)*.07) solid var(--blue);border-radius:2px}
+.t.h::before{content:"";flex:none;box-sizing:border-box;width:calc(var(--w)*.5);height:calc(var(--w)*.64);border:calc(var(--w)*.07) solid var(--blue);border-radius:2px}
 .t.fl svg{width:64%;height:auto;margin-top:calc(var(--w)*.04)}
 .t.fl .fm{font:500 calc(var(--w)*.2)/1 var(--mono);margin-top:calc(var(--w)*.06)}
 .t.fl.f .fm{color:#b3365a}.t.fl.z .fm{color:var(--blue)}
@@ -129,9 +129,9 @@ button{font:inherit;cursor:pointer}
 .lesson{display:grid;gap:10px}
 .lesson.g4{grid-template-columns:repeat(2,1fr)}
 .lesson .cell{border:1px solid rgba(243,234,210,.2);border-radius:6px;padding:10px;font:400 11px/1.45 var(--mono);color:rgba(243,234,210,.82)}
-.lesson .cell b.h{display:block;font:700 13px var(--display);color:var(--cream);margin-bottom:6px}
+.lesson .cell b.ch{display:block;font:700 13px var(--display);color:var(--cream);margin-bottom:6px}
 .lesson .ts{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px}
-.lesson .ts .t{--w:26px}
+.lesson .ts .t{--w:30px}
 .lesson .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font:500 12px var(--mono)}
 
 /* ---------- full-page screens (welcome, round setup, final) ---------- */
@@ -362,3 +362,10 @@ html,body{touch-action:manipulation;overscroll-behavior:none}
 @media (prefers-reduced-motion:reduce){.hc.hint,#act .btn.hint{animation:none}}
 .eo .pl{display:block;margin-top:14px;text-align:left;padding:0}
 #tc .plink{display:block;margin-top:12px;padding:0;text-align:left}
+
+/* Practice guide: no panel, just a note written on the felt with a chalk rule beside it. */
+#tc.practice.bare{background:none;border:0;border-radius:0;box-shadow:none;padding:2px 0 2px 18px;border-left:2px solid var(--chalk);text-shadow:0 1px 2px rgba(0,0,0,.45)}
+#tc.practice.bare h2{font-size:22px;margin-top:6px}
+#tc.practice.bare p{font-size:13px}
+#tc.practice.bare .nav{margin-top:12px}
+.lesson .ts.grp,.vis .ts.grp{flex-wrap:nowrap;flex:none;margin-bottom:0}.lesson .ts.grp{--w:20px}

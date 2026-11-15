@@ -182,8 +182,8 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
       <div className="ab bl wallc" data-tour="wall">
         <div className="cap">Draw wall · {game.drawPile.length}</div>
         <div className="row">{Array.from({ length: Math.min(9, Math.ceil(game.drawPile.length / 7)) }, (_, i) => <BpBack key={i} w={22} />)}</div>
-        <div className="cap" data-tour="flowers">Flower wall · {game.flowerWall.length}</div>
-        <div className="fw">{game.flowerWall.slice(0, 14).map((t) => <BpBack key={t.id} w={22} />)}</div>
+        <div data-tour="flowerwall"><div className="cap" data-tour="flowers">Flower wall · {game.flowerWall.length}</div>
+        <div className="fw">{game.flowerWall.slice(0, 14).map((t) => <BpBack key={t.id} w={22} />)}</div></div>
       </div>
 
       <div className="ab" id="rail" data-tour="rail">

@@ -124,6 +124,6 @@ export function tileFromKey(k: TileKey, id = k): GameTile {
   return { id, kind: "wind", wind: ({ E: "east", S: "south", W: "west", N: "north" } as const)[k as "E" | "S" | "W" | "N"] };
 }
 
-export function Keys({ keys, w = 26 }: { keys: TileKey[]; w?: number }) {
-  return <div className="ts">{keys.map((k, i) => <BpTile key={`${k}-${i}`} tile={tileFromKey(k, `${k}-${i}`)} w={w} />)}</div>;
+export function Keys({ keys, w = 26, className = "" }: { keys: TileKey[]; w?: number; className?: string }) {
+  return <div className={`ts ${className}`}>{keys.map((k, i) => <BpTile key={`${k}-${i}`} tile={tileFromKey(k, `${k}-${i}`)} w={w} />)}</div>;
 }

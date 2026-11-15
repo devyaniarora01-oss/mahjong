@@ -101,7 +101,7 @@ export const PRACTICE_INTRO: GuideCard[] = [
   {
     id: "welcome",
     title: "Your practice hand",
-    body: "This hand is arranged so you will see every key moment: a Flower tile, a Pung, a Chow and a win. Just follow the highlights.\nYou are East, at the bottom. Play moves counterclockwise: you, then South (on your right), West (across) and North (on your left).",
+    body: "This hand is arranged so you will see every key moment. Just follow the highlights.\nYou are East, at the bottom. Play moves counterclockwise: you, then South (on your right), West (across) and North (on your left).",
     compass: true,
     next: "Next",
   },
