@@ -189,7 +189,7 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
     return {
       id: "botpung",
       title: "North took South's discard",
-      body: "The bots claim discards too. South threw a North Wind and North held two, so North took it for a **Pung**.\nA claim jumps the turn to the claimer, so West was skipped.",
+      body: "South threw a North Wind and North held two, so North took it for a **Pung**.\nA claim jumps the turn to the claimer, so West was skipped.",
       tiles: ["N", "N", "N"],
       next: "Got it",
     };
