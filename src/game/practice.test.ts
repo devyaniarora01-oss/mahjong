@@ -45,7 +45,14 @@ describe("scripted practice hand", () => {
     game = claimPureChow(game, "east", [tiles[0].id, tiles[1].id]);
     expect(practiceCard(game, []).id).toBe("afterChow");
     game = discard(game, "east", "bamboo-1-1");
+    // South discards a North Wind and North takes it for a Pung: the guide explains it, then North discards.
+    for (let guard = 0; guard < 20 && game.players.north.melds.length === 0; guard += 1) game = applyPracticeBot(game);
+    expect(game.players.north.melds).toHaveLength(1);
+    expect(practiceCard(game, []).id).toBe("botpung");
+    expect(practiceCard(game, ["botpung"]).id).not.toBe("botpung");
     game = botsUntilHuman(game);
+    expect(game.lastDiscard?.tile.id).toBe("dragon-white-1");
+    expect(canClaimPureChow(game, "east")).toBe(false);
     expect(practiceCard(game, []).id).toBe("draw");
     game = drawFromPile(game, "east");
     expect(canDeclareMahjong(game, "east")).toBe(true);

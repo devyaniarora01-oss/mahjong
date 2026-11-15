@@ -25,7 +25,7 @@ const FLOWER_REPLACEMENT = "wind-south-1";
 /** Tiles that do nothing for your hand: the only legal discards in the practice. */
 export const PRACTICE_SPARES = [FLOWER_REPLACEMENT, "character-9-1", "bamboo-1-1"];
 /**
- * What the Draw Pile hands out, in order: South, South, West, North, then South, West, North again, then you.
+ * What the Draw Pile hands out, in order: South, South, West, North, South, then you (after North's Pung).
  * South discards its first draw (a third 5 Bamboo), West its second, and so on.
  */
 const PILE_SCRIPT = [
@@ -33,9 +33,13 @@ const PILE_SCRIPT = [
   "wind-east-2", // South: nothing for anyone
   "dot-3-1", // West: would be your Chow tile, but West is not on your left
   "dot-6-1", // North: your Chow tile, and North is on your left
-  "wind-north-2", "wind-west-2", "wind-south-2", // South, West, North: nothing for anyone
+  "wind-north-2", // South: North holds two North Winds and Pungs it, so the turn skips West
   "dragon-green-2", // you: completes your pair
 ];
+
+/** North's pair of North Winds (it Pungs South's North Wind) and the tile it throws away afterwards. */
+const NORTH_PAIR = ["wind-north-1", "wind-north-3"];
+const NORTH_SPARE = "dragon-white-1";
 
 export const PRACTICE_FLAGS = { pungTile: "bamboo-5-3", westTile: "dot-3-1", chowTile: "dot-6-1" } as const;
 
@@ -47,12 +51,13 @@ export function createPracticeRound(): EastRoundState {
   const human = HUMAN_HAND.map(take);
   const replacement = take(FLOWER_REPLACEMENT);
   const script = PILE_SCRIPT.map(take);
+  const northFixed = [...NORTH_PAIR, NORTH_SPARE].map(take);
   const isBonus = (tile: Tile) => tile.kind === "flower" || tile.kind === "season";
   const bonus = [...byId.values()].filter(isBonus);
   const plain = [...byId.values()].filter((tile) => !isBonus(tile));
   // Fixed, scattered hands for the three opponents: the same every time, and never an accidental set that matters.
   const spread = plain.filter((_, index) => index % 2 === 0).concat(plain.filter((_, index) => index % 2 === 1));
-  const bots = { south: spread.splice(0, 13), west: spread.splice(0, 13), north: spread.splice(0, 13) };
+  const bots = { south: spread.splice(0, 13), west: spread.splice(0, 13), north: [...northFixed, ...spread.splice(0, 10)] };
   const flowerWall = [replacement, ...bonus, ...spread.splice(0, 16 - 1 - bonus.length)];
   const queue: Tile[] = new Array(128);
   for (let card = 0; card < 13; card += 1) {
@@ -68,11 +73,16 @@ export function createPracticeRound(): EastRoundState {
 
 /** The bots in the practice never claim; they draw, then discard the tile they just drew. */
 export function practiceBotAction(state: EastRoundState): BotAction {
-  if (state.phase === "claim") return { type: "pass" };
+  if (state.phase === "claim") {
+    // The one claim a bot makes: North Pungs South's North Wind, so you can see the bots take each other's discards.
+    if (state.lastDiscard?.tile.id === "wind-north-2" && canClaimPung(state, "north")) return { type: "pung", seat: "north" };
+    return { type: "pass" };
+  }
   const seat = state.turn;
   if (state.phase === "draw") return { type: "draw", seat };
   const hand = state.players[seat].hand;
-  return { type: "discard", seat, tileId: hand[hand.length - 1].id };
+  const spare = hand.find((tile) => tile.id === NORTH_SPARE);
+  return { type: "discard", seat, tileId: (seat === "north" && state.players.north.melds.length > 0 && spare ? spare : hand[hand.length - 1]).id };
 }
 export const applyPracticeBot = (state: EastRoundState) => applyBotAction(state, practiceBotAction(state));
 
@@ -174,6 +184,15 @@ export function practiceCard(game: EastRoundState, acks: readonly string[]): Gui
       };
     }
     return { id: "watch", title: "Waiting for claims", body: "After every discard, anyone may claim it before the next player draws. Nobody can use this one." };
+  }
+  if (game.turn === "north" && game.phase === "discard" && game.players.north.melds.length > 0 && !acks.includes("botpung")) {
+    return {
+      id: "botpung",
+      title: "North took South's discard",
+      body: "The bots claim discards too. South threw a North Wind and North held two, so North took it for a **Pung**.\nA claim jumps the turn to the claimer, so West was skipped.",
+      tiles: ["N", "N", "N"],
+      next: "Got it",
+    };
   }
   if (game.turn === "east" && game.phase === "discard") {
     if (canDeclareMahjong(game, "east")) {

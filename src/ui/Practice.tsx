@@ -10,6 +10,7 @@ type Place = { left: number; top?: number; bottom?: number; arrow?: "left" | "ri
 const PLACES: Record<string, Place> = {
   pung: { left: 910, top: 380, arrow: "left", ay: 105 }, // South's discard, on the right
   west: { left: 835, top: 150, arrow: "left", ay: 57 }, // West's discard, at the top
+  botpung: { left: 140, top: 380, arrow: "left", ay: 170 }, // North's new Pung, bottom left
   chow: { left: 135, top: 190, arrow: "right", ay: 90 }, // North's discard, on the left
 };
 const DEFAULT_PLACE: Place = { left: 900, bottom: 244 };
