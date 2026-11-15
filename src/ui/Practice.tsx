@@ -5,6 +5,15 @@ import { Keys } from "./Tile";
 import type { GuideCard } from "../game/practice";
 
 /** The coach note for the scripted practice hand. It sits where the Learn Mahjong cards sit. */
+type Place = { left: number; top?: number; bottom?: number; arrow?: "left" | "right"; ay?: number };
+/** Where each key-moment card sits: beside the discard it talks about, and never over your own discards. */
+const PLACES: Record<string, Place> = {
+  pung: { left: 910, top: 380, arrow: "left", ay: 105 }, // South's discard, on the right
+  west: { left: 835, top: 150, arrow: "left", ay: 57 }, // West's discard, at the top
+  chow: { left: 135, top: 190, arrow: "right", ay: 90 }, // North's discard, on the left
+};
+const DEFAULT_PLACE: Place = { left: 900, bottom: 244 };
+
 export function PracticeGuide(props: {
   card: GuideCard;
   step?: { index: number; total: number };
@@ -19,10 +28,11 @@ export function PracticeGuide(props: {
   if (card.id === "watch" && !nudge) return null;
   // Intro and finish cards sit at the side; every key-moment card sits just above the action button it talks about.
   const near = !step && !card.finish;
+  const place = PLACES[card.id] ?? DEFAULT_PLACE;
   return (
     <>
       {card.compass && <CompassNotes />}
-      <div id="tc" className={`pinR practice bare ${near ? "near" : "side"}`} role="dialog" aria-label={card.title} style={near ? undefined : { left: 922, top: 150, width: 300 }}>
+      <div id="tc" className={`pinR practice bare ${near ? "near" : "side"} ${near && place.arrow ? `ar-${place.arrow}` : ""}`} role="dialog" aria-label={card.title} style={near ? { ...(({ left, top, bottom }) => ({ left, top, bottom }))(place), ["--ay" as string]: `${place.ay ?? 0}px` } : { left: 922, top: 150, width: 300 }}>
         <div className="eyr">
           {!near && <span className="pk">Practice hand</span>}
           {step && <div className="dots">{Array.from({ length: step.total }, (_, i) => <i key={i} className={i === step.index ? "on" : ""} />)}</div>}

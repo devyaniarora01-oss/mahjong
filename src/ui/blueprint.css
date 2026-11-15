@@ -368,6 +368,8 @@ html,body{touch-action:manipulation;overscroll-behavior:none}
 #tc.practice.bare h2{font-size:20px;margin-top:6px}
 #tc.practice.bare p{font-size:12.5px;margin-top:8px}
 #tc.practice.bare .nav{margin-top:12px}
-#tc.practice.near{left:600px;bottom:244px;top:auto;width:340px;transform:translateX(-50%);box-shadow:0 10px 26px rgba(0,0,0,.5)}
-#tc.practice.near::after{content:"";position:absolute;left:calc(50% + 80px);bottom:-8px;width:14px;height:14px;background:var(--ink);border-right:1px solid rgba(243,234,210,.28);border-bottom:1px solid rgba(243,234,210,.28);transform:translateX(-50%) rotate(45deg)}
+#tc.practice.near{width:300px;box-shadow:0 10px 26px rgba(0,0,0,.5)}
+#tc.practice.near.ar-left::after,#tc.practice.near.ar-right::after{content:"";position:absolute;top:var(--ay);width:14px;height:14px;background:var(--ink);transform:translateY(-50%) rotate(45deg)}
+#tc.practice.near.ar-left::after{left:-8px;border-left:1px solid rgba(243,234,210,.28);border-bottom:1px solid rgba(243,234,210,.28)}
+#tc.practice.near.ar-right::after{right:-8px;border-right:1px solid rgba(243,234,210,.28);border-top:1px solid rgba(243,234,210,.28)}
 #tc.practice.near .eyr{display:none}#tc.practice.near h2{margin-top:0}#tc.practice.near .nav{margin-top:10px}
