@@ -52,10 +52,10 @@ export const TOUR_META: Record<RoundKey, StepMeta[]> = {
   east: [
     { compass: true, card: RIGHT },
     { card: RIGHT },
-    { targets: ["flowerwall"], card: RIGHT },
+    { targets: ["flowerwall", "bonus"], card: RIGHT },
     { card: RIGHT },
     { card: RIGHT },
-    { targets: ["act", "drawn"], card: RIGHT },
+    { targets: ["drawwall", "drawn"], card: RIGHT },
     { card: RIGHT },
     { targets: ["scores"], card: RIGHT },
   ],

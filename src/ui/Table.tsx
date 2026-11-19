@@ -180,9 +180,11 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
       {pond("west")}{pond("north")}{pond("south")}{pond("east")}
 
       <div className="ab bl wallc" data-tour="wall">
-        <div className="cap">Draw wall · {game.drawPile.length}</div>
-        <div className="row">{Array.from({ length: Math.min(9, Math.ceil(game.drawPile.length / 7)) }, (_, i) => <BpBack key={i} w={22} />)}</div>
-        <div data-tour="flowerwall"><div className="cap" data-tour="flowers">Flower wall · {game.flowerWall.length}</div>
+        <div data-tour="drawwall" style={{ width: "fit-content", alignSelf: "center" }}>
+          <div className="cap">Draw wall · {game.drawPile.length}</div>
+          <div className="row">{Array.from({ length: Math.min(9, Math.ceil(game.drawPile.length / 7)) }, (_, i) => <BpBack key={i} w={22} />)}</div>
+        </div>
+        <div data-tour="flowerwall" style={{ width: "fit-content", alignSelf: "center" }}><div className="cap" data-tour="flowers">Flower wall · {game.flowerWall.length}</div>
         <div className="fw">{game.flowerWall.slice(0, 14).map((t) => <BpBack key={t.id} w={22} />)}</div></div>
       </div>
 
@@ -210,7 +212,7 @@ export function TableBoard({ game, tableGame, humanSeat, selectedId, selectedIds
               {m.tiles.map((t) => cell(t, false, "", true))}
             </div>
           ))}
-          {me.bonusTiles.length > 0 && <><div className="rdiv" /><div className="rg" style={{ marginLeft: 22 }}>{me.bonusTiles.map((t) => cell(t, false))}</div></>}
+          {me.bonusTiles.length > 0 && <><div className="rdiv" /><div className="rg" data-tour="bonus" style={{ marginLeft: 22 }}>{me.bonusTiles.map((t) => cell(t, false))}</div></>}
         </div>
       </div>
     </>
