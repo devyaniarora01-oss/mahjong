@@ -167,12 +167,14 @@ function rectsFor(names: string[]): Rect[] {
   const board = document.getElementById("board");
   if (!stage || !board) return [];
   const out: Rect[] = [];
+  // The overlay is drawn in board coordinates; on wide windows the board sits inside a wider stage, so offset by its origin.
+  const origin = stageRect(board.getBoundingClientRect());
   for (const name of names) {
     document.querySelectorAll(`[data-tour~="${name}"]`).forEach((el) => {
       const r = (el as HTMLElement).getBoundingClientRect();
       if (r.width === 0) return;
       const a = stageRect(r);
-      out.push({ x: a.x - 8, y: a.y - 8, w: a.w + 16, h: a.h + 16 });
+      out.push({ x: a.x - origin.x - 8, y: a.y - origin.y - 8, w: a.w + 16, h: a.h + 16 });
     });
   }
   return out;
